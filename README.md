@@ -19,11 +19,11 @@ Detailed documentation per skill is in the [`docs`](docs) folder.
 
 ## Quick start
  
-Clone the repo:
+You can either manually download the required skill files or simply clone this repo:
  
 ```bash
-git clone https://github.com/YOUR-USERNAME/YOUR-REPO.git
-cd YOUR-REPO
+git clone https://github.com/mkrouwel/kern-skills.git
+cd kern-skills
 ```
  
 Then copy the skill folders into the location for your tool (see below). You can install all skills or just the ones you need.
