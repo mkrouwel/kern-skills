@@ -32,13 +32,19 @@ Doe dit vóór het toetsen. De lijstregels (SAM-01 t/m SAM-10, ESS-05, CON-01) h
    - Voeg toe wat het script mist: verbuigingen en afleidingen ("aangevraagd" → aanvraag, `soort` = `zelf` als het de eigen term is), en vaktermen die geen begrip in de lijst zijn (`doel` = de ontbrekende term).
    - Verwijder valse treffers: een woord dat in een andere betekenis gebruikt wordt.
    - Zet `soort` goed: `genus` alleen voor het bovenliggende begrip.
-3. **Analyse:** `python -I scripts/graaf.py analyse randen.csv --begrippen begrippen.csv -o graaf.md`. Dit levert:
+3. **Analyse:** `python -I scripts/graaf.py analyse randen.csv --begrippen begrippen.csv -o graaf.md --drawio graaf.drawio`. Dit levert:
    - zelfverwijzingen (INT-11)
    - alle kringen, ook van drie of meer stappen (SAM-05)
    - ontbrekende begrippen (SAM-08)
-   - een Mermaid-diagram waarin kringen rood en ontbrekende begrippen gestreept zijn
+   - een indeling in **niveaus**: niveau 0 = elementair (verwijst naar geen ander begrip in de lijst), hoger = meer samengesteld
+   - een Mermaid-diagram van boven (samengesteld) naar beneden (elementair). Kringen zijn rood, ontbrekende begrippen gestreept en elementaire begrippen groen.
+   - met `--drawio`: een `.drawio`-bestand met vaste, gelaagde posities. Het opent direct in draw.io of in de VS Code-extensie Draw.io Integration. Begrippen, genus-pijlen en verwijzingspijlen staan op aparte lagen die je aan en uit kunt zetten.
 
    Geef `--begrippen` altijd mee; zonder die optie gelden begrippen zonder uitgaande randen als ontbrekend.
+
+   **Layout:** de volgorde binnen een niveau wordt geoptimaliseerd op de genus-pijlen. De taxonomie is meestal een boom en dus zonder kruisingen te tekenen. Verwijzingen naar veelgebruikte begrippen kruisen onvermijdelijk. Met `--alleen-genus` toont het Mermaid-diagram alleen de taxonomie.
+
+   **Genus vs. gebruikt:** bij een extensionele definitie ('X of Y') is er geen genus. Zet die randen in `randen.csv` op `gebruikt`.
 
 Leid uit de randen ook af:
 - de **hiërarchie**: begrippen met hetzelfde genus vormen een onderverdeling (SAM-09, SAM-10)
