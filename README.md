@@ -9,6 +9,8 @@ This repository is work-in-progress and contains skill files to:
 
 These skills follow the open Agent Skills standard, so they work in both Claude Code and Google Antigravity without any changes.
 
+Licensed under the MIT License. See LICENSE for details.
+
 ## Skills
 
 | Skill | Description | Documentation |
