@@ -12,12 +12,19 @@ Twee stappen:
       Zoekt alle kringen (ook langer dan twee stappen) en schrijft een rapport
       met een Mermaid-diagram.
 
-begrippen.csv: kolommen 'term' en 'definitie', optioneel 'synoniemen'
-(gescheiden door '|'). Scheidingsteken ';' of ',' wordt automatisch herkend.
+begrippen.csv: de begrippenlijst zelf (formaat: zie README). Gebruikt worden
+'term' en 'definitie', en voor het herkennen van termen ook 'synoniemen' en
+'acroniem' (meerdere waarden gescheiden door '|'). Andere kolommen worden
+genegeerd. Scheidingsteken ';' of ',' wordt automatisch herkend.
 
-randen.csv: kolommen 'bron;doel;soort;fragment'. soort is 'genus', 'gebruikt'
-of 'zelf' (de term staat in zijn eigen definitie). Een doel dat geen begrip in
-de lijst is, wordt als ontbrekend begrip getekend.
+randen.csv: kolommen 'bron;doel;soort;fragment'. soort is 'genus', 'gebruikt',
+'opsomming' (element van een extensionele definitie 'X of Y'; geen genus) of
+'zelf' (de term staat in zijn eigen definitie). Een doel dat geen begrip in de
+lijst is, wordt als ontbrekend begrip getekend.
+
+Termen mogen variabelen bevatten, bijvoorbeeld 'politieke vereniging op [dag]'.
+De kern ('politieke vereniging') wordt dan in definities herkend; de variabele
+zelf ('dag') wordt herkend als hij als begrip in de lijst staat.
 """
 
 import argparse
@@ -46,6 +53,41 @@ def norm(s):
     return re.sub(r"\s+", " ", s.strip().lower())
 
 
+# kolomnamen van de begrippenlijst (kleine letters) met toegestane varianten
+KOLOMMEN = {
+    "term": ["term", "begrip"],
+    "definitie": ["definitie"],
+    "synoniemen": ["synoniemen", "synoniem"],
+    "acroniem": ["acroniem", "acro", "afkorting"],
+}
+
+
+def veld(rij, naam):
+    for k in KOLOMMEN[naam]:
+        if rij.get(k):
+            return rij[k]
+    return ""
+
+
+def meerdere(waarde):
+    """Meerdere waarden in één cel, gescheiden door '|' (of ',')."""
+    return [w.strip() for w in re.split(r"[|,]", waarde) if w.strip()]
+
+
+def lees_begrippen(pad):
+    """Begrippenlijst inlezen; alleen term, definitie en synoniemen (incl. acroniemen) zijn nodig."""
+    rijen = lees_csv(pad)
+    if not rijen or not any(k in rijen[0] for k in KOLOMMEN["term"]) or "definitie" not in rijen[0]:
+        sys.exit(f"{pad} moet ten minste de kolommen 'term' en 'definitie' hebben")
+    uit = []
+    for r in rijen:
+        term = veld(r, "term")
+        if term:
+            uit.append({"term": term, "definitie": veld(r, "definitie"),
+                        "synoniemen": meerdere(veld(r, "synoniemen")) + meerdere(veld(r, "acroniem"))})
+    return uit
+
+
 def varianten(term):
     """Term plus eenvoudige Nederlandse meervouds- en genitiefvormen van het laatste woord."""
     woorden = norm(term).split(" ")
@@ -62,24 +104,53 @@ def varianten(term):
     return {" ".join(woorden[:-1] + [v]) for v in vormen}
 
 
-def extract(args):
-    begrippen = lees_csv(args.begrippen)
-    if not begrippen or "term" not in begrippen[0] or "definitie" not in begrippen[0]:
-        sys.exit("begrippen.csv moet de kolommen 'term' en 'definitie' hebben")
+VERBINDINGSWOORDEN = {"op", "van", "t.o.v.", "per", "in", "bij", "voor", "tijdens", "met"}
+SCHEIDERS = {"of", "en/of", "dan", "wel", "en"}
 
-    # (vorm, term) gesorteerd op lengte: langste treffer wint ("strafbaar feit" voor "feit")
-    # term zonder kwalificatie tussen haakjes ("landelijke politieke partij (op moment)"),
-    # alleen als die kale vorm uniek is (dus niet bij "openbaar lichaam (gw)" en "(wpp)")
-    kaal = lambda s: re.sub(r"\s*\([^)]*\)\s*$", "", s).strip()
+
+def kern(term):
+    """Term zonder kwalificatie tussen haakjes en zonder variabelen [..] (met hun verbindingswoorden)."""
+    t = re.sub(r"\s*\([^)]*\)\s*$", "", term)
+    t = re.sub(r"\[[^\]]*\]", " ", t)
+    woorden = t.split()
+    while woorden and woorden[-1].lower() in VERBINDINGSWOORDEN:
+        woorden.pop()
+    return " ".join(woorden).strip()
+
+
+def is_opsomming(definitie, bezet, n_treffers):
+    """Extensionele definitie: alleen termen, gescheiden door 'of', 'en/of', 'dan wel' of komma's.
+
+    Variabelen [..] en verbindingswoorden tussen de termen worden genegeerd.
+    """
+    if n_treffers < 2:
+        return False
+    rest = "".join(" " if bezet[i] else c for i, c in enumerate(definitie))
+    rest = re.sub(r"\[[^\]]*\]", " ", rest).strip().rstrip(".")
+    woorden = re.findall(r"[\w/.]+", rest.replace(",", " , "))
+    if not any(w in ("of", "en/of", "dan") for w in woorden):
+        return False
+    return all(w in SCHEIDERS | VERBINDINGSWOORDEN or w == "," for w in woorden)
+
+
+def extract(args):
+    begrippen = lees_begrippen(args.begrippen)
+
+    # (vorm, term) gesorteerd op lengte: langste treffer wint ("strafbaar feit" voor "feit").
+    # Daarnaast de kern van de term, als die uniek is:
+    # - zonder kwalificatie tussen haakjes: "landelijke politieke partij (op moment)"
+    #   (niet bij "openbaar lichaam (gw)" naast "openbaar lichaam (wpp)")
+    # - zonder variabelen en de verbindingswoorden ervoor: "laatstgehouden verkiezing van
+    #   [vertegenwoordigend orgaan] op [dag]" -> "laatstgehouden verkiezing"
     kale_telling = defaultdict(int)
     for b in begrippen:
-        kale_telling[norm(kaal(b["term"]))] += 1
+        kale_telling[norm(kern(b["term"]))] += 1
 
     vormen = []
     for b in begrippen:
-        namen = [b["term"]] + [s for s in b.get("synoniemen", "").split("|") if s.strip()]
-        k = kaal(b["term"])
-        if k != b["term"] and kale_telling[norm(k)] == 1:
+        namen = [b["term"]] + b["synoniemen"]
+        k = kern(b["term"])
+        if norm(k) != norm(b["term"]) and kale_telling[norm(k)] == 1:
             namen.append(k)
         for naam in namen:
             for v in varianten(naam):
@@ -98,6 +169,7 @@ def extract(args):
                 bezet[m.start():m.end()] = [True] * (m.end() - m.start())
                 treffers.append((m.start(), doel, m.group(0)))
         treffers.sort()
+        opsomming = is_opsomming(definitie, bezet, len(treffers))
         gezien = set()
         for i, (pos, doel, fragment) in enumerate(treffers):
             if doel in gezien:
@@ -105,6 +177,8 @@ def extract(args):
             gezien.add(doel)
             if norm(doel) == norm(b["term"]):
                 soort = "zelf"
+            elif opsomming:
+                soort = "opsomming"  # extensionele definitie: geen genus
             elif i == 0 and len(definitie[:pos].split()) <= 2:
                 soort = "genus"  # eerste treffer vooraan in de definitie
             else:
@@ -116,6 +190,16 @@ def extract(args):
         w.writeheader()
         w.writerows(randen)
     print(f"{len(randen)} kandidaat-randen voor {len(begrippen)} begrippen geschreven naar {args.output}")
+
+    # KERN-STR-01: variabelen gebonden (in term én definitie) en getypeerd (term uit de lijst)
+    var = lambda s: {norm(v) for v in re.findall(r"\[([^\]]+)\]", s)}
+    bekend = {norm(b["term"]) for b in begrippen} | {norm(kern(b["term"])) for b in begrippen}
+    for b in begrippen:
+        vt, vd = var(b["term"]), var(b["definitie"])
+        if vt != vd:
+            print(f"KERN-STR-01: '{b['term']}': variabelen in term {sorted(vt)} ≠ in definitie {sorted(vd)}")
+        for v in sorted((vt | vd) - bekend):
+            print(f"KERN-STR-01 (controleer): '{b['term']}': variabele [{v}] is geen term uit de lijst (B1-woord?)")
     print("Controleer de randen handmatig voordat je 'analyse' draait.")
 
 
@@ -357,7 +441,7 @@ def schrijf_drawio(pad, niveau, lagen, keten, uniek, in_kring, ontbrekend, kring
 
 def analyse(args):
     randen = lees_csv(args.randen)
-    begrippen = {r["term"] for r in lees_csv(args.begrippen)} if args.begrippen else {r["bron"] for r in randen}
+    begrippen = {r["term"] for r in lees_begrippen(args.begrippen)} if args.begrippen else {r["bron"] for r in randen}
 
     # dubbele randen samenvoegen; 'genus' en 'zelf' gaan voor 'gebruikt'
     rang = {"zelf": 0, "genus": 1, "gebruikt": 2}
@@ -386,10 +470,10 @@ def analyse(args):
     uit = []
     uit.append("# Verwijzingsgraaf\n")
     uit.append(f"- Begrippen: {len(begrippen)}; randen: {len(uniek)}")
-    uit.append(f"- Zelfverwijzingen (INT-11): {len(zelf)}")
+    uit.append(f"- Zelfverwijzingen (SAM-05): {len(zelf)}")
     uit.append(f"- Kringen over meerdere begrippen (SAM-05): {len(alle_kringen)}"
                + (f" (afgekapt op {MAX_KRINGEN})" if len(alle_kringen) >= MAX_KRINGEN else ""))
-    uit.append(f"- Ontbrekende begrippen (SAM-08): {len(ontbrekend)}\n")
+    uit.append(f"- Ontbrekende begrippen (KERN-SAM-02): {len(ontbrekend)}\n")
 
     if zelf:
         uit.append("## Zelfverwijzingen\n")
@@ -489,6 +573,7 @@ def main():
     a.add_argument("--alleen-genus", action="store_true", help="Mermaid-diagram met alleen genus-pijlen (taxonomie)")
     a.set_defaults(func=analyse)
     args = p.parse_args()
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # Windows-console (cp1252)
     args.func(args)
 
 
