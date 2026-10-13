@@ -66,7 +66,8 @@ def sorteer_id(i):
     return (not i.isdigit(), int(i) if i.isdigit() else 0, i)
 
 
-def verwerk(pad):
+def lees(pad):
+    """CSD uit één export als dict (zie het einde van deze functie) plus opmerkingen; None zonder CSD."""
     with open(pad, encoding="utf-8-sig") as f:
         d = json.load(f)
     nodes = {n["id"]: n for n in d.get("nodes", [])}
@@ -154,6 +155,18 @@ def verwerk(pad):
         else:
             opm.append(f"Edge {ts} → {tt} ({lijn}) niet geïnterpreteerd.")
 
+    return {"bestand": d.get("fileName", pad), "tk": tk, "mtk": mtk, "tk_label": tk_label,
+            "mtk_label": mtk_label, "initieert": initieert, "raadpleegt": raadpleegt,
+            "zwevend": zwevend, "log_namen": log_namen}, opm
+
+
+def verwerk(pad):
+    M, opm = lees(pad)
+    if M is None:
+        return None, opm
+    tk, mtk, tk_label, mtk_label = M["tk"], M["mtk"], M["tk_label"], M["mtk_label"]
+    initieert, raadpleegt, zwevend, log_namen = M["initieert"], M["raadpleegt"], M["zwevend"], M["log_namen"]
+
     def sorteer_label(lbl):
         m = re.match(r"(MTK |TK)(\w+)", lbl)
         return (lbl.startswith("TK"), sorteer_id(m.group(2)) if m else (True, 0, lbl), lbl)
@@ -167,7 +180,7 @@ def verwerk(pad):
         rijen.append((f"TK{t['nr']}", t["type"], t["uitvoerder"], ", ".join(init_lbl),
                       ", ".join(sorted(raadpleegt[t["uitvoerder_id"]], key=sorteer_label))))
 
-    uit = [f"## {d.get('fileName', pad)}", "", "### Transactiesoorten", "",
+    uit = [f"## {M['bestand']}", "", "### Transactiesoorten", "",
            "| ID | Type | Uitvoerder | Initieert | Raadpleegt |", "|---|---|---|---|---|"]
     uit += [f"| {' | '.join(r)} |" for r in rijen]
     uit += ["", "### MTK's", "", "| ID | Naam |", "|---|---|"]

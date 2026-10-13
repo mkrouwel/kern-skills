@@ -57,3 +57,7 @@ python -I skills/definitiekwaliteit/scripts/graaf.py analyse randen.csv --begrip
    - Add `--alleen-genus` to show only the taxonomy.
 
 No dependencies beyond the Python standard library.
+
+### Used by other skills
+
+The functions `lees_begrippen()` and `randen_uit()` in `graaf.py` are also used by [`yadm-consistency`](yadm-consistency.md) to compare the fact model with the glossary. Keep their results stable when changing the script.

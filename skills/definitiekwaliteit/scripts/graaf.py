@@ -133,9 +133,8 @@ def is_opsomming(definitie, bezet, n_treffers):
     return all(w in SCHEIDERS | VERBINDINGSWOORDEN or w == "," for w in woorden)
 
 
-def extract(args):
-    begrippen = lees_begrippen(args.begrippen)
-
+def randen_uit(begrippen):
+    """Kandidaat-randen (bron, doel, soort, fragment) uit de definities van een ingelezen begrippenlijst."""
     # (vorm, term) gesorteerd op lengte: langste treffer wint ("strafbaar feit" voor "feit").
     # Daarnaast de kern van de term, als die uniek is:
     # - zonder kwalificatie tussen haakjes: "landelijke politieke partij (op moment)"
@@ -184,7 +183,12 @@ def extract(args):
             else:
                 soort = "gebruikt"
             randen.append({"bron": b["term"], "doel": doel, "soort": soort, "fragment": fragment})
+    return randen
 
+
+def extract(args):
+    begrippen = lees_begrippen(args.begrippen)
+    randen = randen_uit(begrippen)
     with open(args.output, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=["bron", "doel", "soort", "fragment"], delimiter=";")
         w.writeheader()

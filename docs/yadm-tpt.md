@@ -54,3 +54,7 @@ No dependencies beyond the Python standard library.
 | `solid` edge to a `transaction` | initiator link |
 | `dashed` edge between an `actor` and a `multiple_transaction_kind` or `transaction` | information link |
 | `transaction.data.color` | `green` = I, `blue` = D, `red` / `default` / none = O |
+
+### Used by other skills
+
+The function `lees()` in `tpt.py` returns the CSD as data; [`yadm-consistency`](yadm-consistency.md) uses it. Keep its result stable when changing the script.

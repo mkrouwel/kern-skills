@@ -78,7 +78,8 @@ def et_info(n):
 max1 = lambda l: bool(re.fullmatch(r"(\d+\.\.)?[01]", l or ""))
 
 
-def verwerk(paden):
+def lees(paden):
+    """Feitenmodel uit de exports als dict (zie het einde van deze functie), of None zonder entiteittypen."""
     # ---------- inlezen ----------
     U, VOORKOMENS, E, H = {}, defaultdict(list), [], {}
     for pad in paden:
@@ -113,12 +114,13 @@ def verwerk(paden):
         return n["type"]
 
     # canonieke naam: meest voorkomende over de exports, bij gelijkspel de eerste
-    CANON, opm = {}, []
+    CANON, opm, conflicten = {}, [], []
     for i, lijst in VOORKOMENS.items():
         namen = [eigen_naam(n) for _, n in lijst]
         tel = Counter(namen)
         CANON[i] = max(namen, key=lambda x: (tel[x], -namen.index(x)))
         if len(tel) > 1 and U[i]["type"] in ("entity_type", "attribute"):
+            conflicten.append((CANON[i], {nm: sorted(k for k, n in lijst if eigen_naam(n) == nm) for nm in tel}))
             opm.append(f"Hetzelfde element heet per export anders; gebruikt: {CANON[i]} (ook: " + ", ".join(
                 f"{nm} in {', '.join(k for k, n in lijst if eigen_naam(n) == nm)}" for nm in tel if nm != CANON[i]) + ").")
     naam = CANON.get
@@ -128,20 +130,27 @@ def verwerk(paden):
         return n["type"] == "entity_type" and et_info(n)[0] == "A" and kinderen[i]
 
     # ---------- entiteittypen en attribuutsoorten ----------
-    ET = {}
+    ET, kop_a = {}, []
     for i, lijst in VOORKOMENS.items():
         if U[i]["type"] not in ("entity_type", "attribute") or is_plaatshouder(i):
             continue
-        e = ET.setdefault(naam(i), {"bron": set(), "attrs": {}})
+        e = ET.setdefault(naam(i), {"bron": set(), "attrs": {}, "focus": {}, "dubbel": set()})
         for kort, m in lijst:
             e["bron"].add(kort)
+            e["focus"].setdefault(m["data"].get("focus") or "", set()).add(kort)   # in = intern, out = extern
+            if m["type"] == "entity_type" and (inhoud(m).get("header") or "").strip() == "A":
+                kop_a.append((kort, i, naam(i)))
+            gezien = set()
             for r in et_info(m)[1]:
                 r = re.sub(r"^-\s*", "", r)
                 mm = re.match(r"(.*?)\s*\{(.*)\}\s*$", r)
                 a, w = (mm.group(1).strip(), mm.group(2).strip()) if mm else (r, "")
                 e["attrs"].setdefault((a, w), set()).add(kort)
+                if a.lower() in gezien:
+                    e["dubbel"].add(a)
+                gezien.add(a.lower())
     if not ET:
-        return None, ["Geen feitenmodel (entiteittypen) gevonden in de opgegeven exports."]
+        return None
 
     # ---------- productsoorten ----------
     PK, pk_van = {}, {}                                # (tk, formulering) -> gegevens; node-id -> sleutel
@@ -157,7 +166,7 @@ def verwerk(paden):
                 v["ouder"].add(naam(par))
 
     # ---------- edges ----------
-    PT, AFL = {}, defaultdict(set)
+    PT, PT_LIJNEN, AFL = {}, [], defaultdict(set)
     zwevend, gestippeld, kard_fout = [], [], []
     for kort, e in E:
         D = e.get("data") or {}
@@ -165,7 +174,7 @@ def verwerk(paden):
         cd = D.get("cardinality") or {}
         lab = [schoon((cd.get(k) or {}).get("label")) for k in ("startLabel", "middleLabel", "endLabel")]
         if s not in U or t not in U:
-            zwevend.append((kort, "eigenschapsoort" if D.get("markerMid") else "overig", lab[1]))
+            zwevend.append((kort, "eigenschapsoort" if D.get("markerMid") else "overig", lab[1], e["id"]))
             continue
         if U[s]["type"] == "production_event" or U[t]["type"] == "production_event":
             p, o = (s, t) if s in pk_van else (t, s)
@@ -177,6 +186,8 @@ def verwerk(paden):
                               {"bron": set(), "eigenaar": naam(s), "ander": set()})
             g["bron"].add(kort)
             g["ander"].add(naam(t))
+            PT_LIJNEN.append({"bron": kort, "van": naam(s), "naar": naam(t), "form": lab[1],
+                              "kard_van": lab[0], "kard_naar": lab[2]})
             if not max1(lab[2]):
                 kard_fout.append(f"'{lab[1]}' ({naam(s)} → {naam(t)}, {lab[0]} : {lab[2]}, {kort})")
             continue
@@ -272,11 +283,24 @@ def verwerk(paden):
         delen += [f"gestippeld naar {ster(t)} (soort onbekend)" for _, s, t in onbepaald if s == nm]
         return "; ".join(delen)
 
+    return {"ET": ET, "PT": PT, "PT_LIJNEN": PT_LIJNEN, "PK": PK, "AFL": AFL, "volgorde": volgorde,
+            "afgeleid": afgeleid, "ster": ster, "afleiding": afleiding, "conflicten": conflicten,
+            "kop_a": kop_a, "zwevend": zwevend, "kard_fout": kard_fout, "onbepaald": onbepaald,
+            "buiten": buiten, "opm": opm}
+
+
+def verwerk(paden):
+    M = lees(paden)
+    if M is None:
+        return None, ["Geen feitenmodel (entiteittypen) gevonden in de opgegeven exports."]
+    ET, PT, PK, ster, afleiding, opm = M["ET"], M["PT"], M["PK"], M["ster"], M["afleiding"], list(M["opm"])
+    kard_fout, onbepaald, buiten, zwevend = M["kard_fout"], M["onbepaald"], M["buiten"], M["zwevend"]
+
     # ---------- tabel ----------
     B = lambda s: ", ".join(sorted(s))
     uit = ["| Feittype | Soort | Waardetype | Afleiding | Bron |", "|---|---|---|---|---|"]
     rij = lambda *c: uit.append("| " + " | ".join(c) + " |")
-    for nm in volgorde:
+    for nm in M["volgorde"]:
         e = ET[nm]
         rij(ster(nm), "entiteittype", "", afleiding(nm), B(e["bron"]))
         for (a, w), br in e["attrs"].items():
@@ -302,7 +326,7 @@ def verwerk(paden):
         opm.append(f"{len(buiten)} gestippelde lijn(en) naar een element buiten het eigen diagram genegeerd: "
                    + "; ".join(buiten) + ".")
     if zwevend:
-        pt_z = sorted({f for _, s, f in zwevend if s == "eigenschapsoort" and f and f not in PT})
+        pt_z = sorted({f for _, s, f, _ in zwevend if s == "eigenschapsoort" and f and f not in PT})
         opm.append(f"{len(zwevend)} lijnen met een eindpunt dat in geen enkele export voorkomt; niet opgenomen. "
                    + (f"Eigenschapsoorten die alleen zo voorkomen: {'; '.join(pt_z)}." if pt_z else ""))
     return uit, opm

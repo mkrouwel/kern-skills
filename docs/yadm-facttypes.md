@@ -58,3 +58,7 @@ No dependencies beyond the Python standard library.
 | dashed edge with handle `derivation` `aggregation` / `generalisation` | aggregation / generalisation |
 | dashed edge with a closed arrow | specialisation |
 | dashed edge without an arrow to an aggregate or generalisation | member of that aggregation or generalisation |
+
+### Used by other skills
+
+The function `lees()` in `feittypen.py` returns the fact model as data; [`yadm-consistency`](yadm-consistency.md) uses it. Keep its result stable when changing the script.

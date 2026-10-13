@@ -18,8 +18,29 @@ Licensed under the MIT License. See LICENSE for details.
 | [`definitiekwaliteit`](skills/definitiekwaliteit) | Checks a glossary (terms, definitions, references, examples) against the ASTRA rules for definition quality plus additional KERN rules, and proposes improved definitions, references, examples and missing terms. Includes a reference graph of the definitions to find cycles and undefined terms. In Dutch. | [docs/definitiekwaliteit.md](docs/definitiekwaliteit.md) |
 | [`yadm-tpt`](skills/yadm-tpt) | Extracts transaction kinds (with type O/I/D), executing actor roles, initiator links, information links and multiple transaction kinds (MTKs) from a YADM export (DEMO model, JSON), and lists them as a transaction table and an MTK table. In Dutch. | [docs/yadm-tpt.md](docs/yadm-tpt.md) |
 | [`yadm-facttypes`](skills/yadm-facttypes) | Extracts all fact types (entity types, attribute types with value type, property types and product kinds) from one or more YADM exports (DEMO fact model, JSON), merges them across exports, and lists them in one table with derivations (specialisation, generalisation, aggregation), ordered from elementary to derived. In Dutch. | [docs/yadm-facttypes.md](docs/yadm-facttypes.md) |
+| [`yadm-consistency`](skills/yadm-consistency) | Checks the consistency between the cooperation model (CSD) and the fact model in YADM exports: transaction kinds against product kinds, variables in formulations, cardinalities, value types, internal and external entity types, naming across diagrams. Optionally checks the fact model against a glossary, including content (specialisations, generalisations and aggregations against genus and definitions). Builds on the three skills above. In Dutch. | [docs/yadm-consistency.md](docs/yadm-consistency.md) |
 
 Detailed documentation per skill is in the [`docs`](docs) folder.
+
+### How the skills fit together
+
+`yadm-consistency` reuses the other skills' scripts instead of duplicating them, so install all four in the same skills folder if you use it.
+
+```mermaid
+flowchart LR
+    yadm[("YADM export<br>(JSON)")]
+    glossary[("glossary<br>(CSV)")]
+    tpt["yadm-tpt<br>transaction kinds, MTKs"]
+    ft["yadm-facttypes<br>fact types"]
+    dk["definitiekwaliteit<br>definition quality"]
+    cons["yadm-consistency<br>CM ↔ FM ↔ glossary"]
+    yadm --> tpt
+    yadm --> ft
+    glossary --> dk
+    tpt --> cons
+    ft --> cons
+    dk -. optional .-> cons
+```
 
 ## Quick start
  
