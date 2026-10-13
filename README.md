@@ -16,6 +16,7 @@ Licensed under the MIT License. See LICENSE for details.
 | Skill | Description | Documentation |
 |---|---|---|
 | [`definitiekwaliteit`](skills/definitiekwaliteit) | Checks a glossary (terms, definitions, references, examples) against the ASTRA rules for definition quality plus additional KERN rules, and proposes improved definitions, references, examples and missing terms. Includes a reference graph of the definitions to find cycles and undefined terms. In Dutch. | [docs/definitiekwaliteit.md](docs/definitiekwaliteit.md) |
+| [`yadm-tpt`](skills/yadm-tpt) | Extracts transaction kinds (with type O/I/D), executing actor roles, initiator links, information links and multiple transaction kinds (MTKs) from a YADM export (DEMO model, JSON), and lists them as a transaction table and an MTK table. In Dutch. | [docs/yadm-tpt.md](docs/yadm-tpt.md) |
 
 Detailed documentation per skill is in the [`docs`](docs) folder.
 
