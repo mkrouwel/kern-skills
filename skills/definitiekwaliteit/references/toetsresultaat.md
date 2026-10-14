@@ -21,11 +21,11 @@ Werkbestanden blijven in de scratchpad en worden niet meegeleverd: `begrippenlij
   "regelset": {
     "astra": "regels-astra.csv",
     "aanvullend": "regels-aanvullend.csv",
-    "regels": ["CON-01", "CON-02", "…", "KERN-STR-01"]
+    "regels": ["CON-01", "CON-02", "…", "KERN-D-STR01"]
   },
   "lijstbevindingen": [
     {
-      "regel": "KERN-CON-02",
+      "regel": "KERN-D-CON02",
       "oordeel": "fout",
       "bevinding": "Het domein van de lijst is niet vastgelegd.",
       "voorstel": "Leg vast: 'Wpp (36 742, bijgewerkt t/m nr. 20), tenzij anders vermeld'."
@@ -43,7 +43,7 @@ Werkbestanden blijven in de scratchpad en worden niet meegeleverd: `begrippenlij
           "bevinding": "'van een verkiezing' maakt elke verkiezing een eigen instantie; volgens Kieswet E 15 is er één centraal stembureau per vertegenwoordigend orgaan.",
           "voorstel": "'voor de verkiezingen van de leden van één vertegenwoordigend orgaan'"
         },
-        "KERN-CON-03": {
+        "KERN-D-CON03": {
           "oordeel": "voldoet",
           "bevinding": "Kieswet E 15: 'Er is voor de verkiezing van elk vertegenwoordigend orgaan een centraal stembureau.'"
         }
@@ -63,7 +63,7 @@ Werkbestanden blijven in de scratchpad en worden niet meegeleverd: `begrippenlij
       "term": "aanduiding",
       "definitie": "benaming waarmee een politieke groepering op de kandidatenlijst wordt vermeld",
       "genus": "benaming",
-      "reden": "Gebruikt in blanco lijst, registratie en politieke vereniging (KERN-SAM-02).",
+      "reden": "Gebruikt in blanco lijst, registratie en politieke vereniging (KERN-D-SAM02).",
       "grondslag": "Kieswet G 1 lid 1"
     }
   ],
@@ -78,9 +78,9 @@ Werkbestanden blijven in de scratchpad en worden niet meegeleverd: `begrippenlij
 - **Alle regels per begrip:** `beoordelingen` bevat elke regel uit `regelset.regels` voor elk begrip, ook `voldoet` en `n.v.t.`. Dan is te zien dat een regel getoetst is.
 - **Toelichting alleen waar nodig:**
   - `bevinding` en `voorstel` mogen ontbreken bij `voldoet` en `n.v.t.`
-  - bij `voldoet` op een bronregel (CON-02, KERN-CON-03) staat de geciteerde brontekst in `bevinding`
+  - bij `voldoet` op een bronregel (CON-02, KERN-D-CON03) staat de geciteerde brontekst in `bevinding`
 - **Waarden voor `oordeel`:** `voldoet`, `fout`, `aandachtspunt`, `twijfel`, `niet toetsbaar`, `n.v.t.` Een schending van een verplichte regel is `fout`, van een aanbevolen regel `aandachtspunt`.
-- **Lijstbrede regels:** regels die voor de hele lijst gelden (bv. KERN-CON-02) staan in `lijstbevindingen`, en per begrip als `n.v.t.`
+- **Lijstbrede regels:** regels die voor de hele lijst gelden (bv. KERN-D-CON02) staan in `lijstbevindingen`, en per begrip als `n.v.t.`
 - **`voorstel` per begrip** is het samengevoegde voorstel dat alle bevindingen van dat begrip tegelijk oplost. Velden die niet veranderen laat je weg.
 - **Niet zelf gecontroleerd:** markeer alles wat je niet in de bron hebt gecontroleerd met `[te verifiëren]`.
 - **`graaf.voor` en `graaf.na`:** `voor` is de graaf van de huidige lijst. `na` is de graaf met alle voorgestelde definities en aanvullende termen. Mermaid-code als string.
@@ -96,7 +96,7 @@ Het rapport bestaat uit tabellen, met alleen korte koppen en zo nodig één inle
 | Begrippen | 44 |
 | Regels | 50 (36 ASTRA, 14 KERN) |
 | Fouten / aandachtspunten / twijfel / niet toetsbaar | 72 / 42 / 43 / 5 |
-| Referenties (KERN-CON-03) kloppen / wijken af / twijfel / niet gecontroleerd | 22 / 11 / 5 / 5 |
+| Referenties (KERN-D-CON03) kloppen / wijken af / twijfel / niet gecontroleerd | 22 / 11 / 5 / 5 |
 | Kringen voor → na voorstellen | 4 → 0 |
 | Ontbrekende begrippen voor → na | 9 → 0 |
 

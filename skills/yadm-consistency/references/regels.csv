@@ -1,0 +1,26 @@
+Id,Categorie,Ernst,Regel,Controle
+KERN-C-CM01,coöperatiemodel,fout,"Elke transactiesoort die niet zelfactiverend is, heeft minstens één initiator",initiatorlink van een actorrol of samengestelde actorrol naar de transactiesoort
+KERN-C-TK01,transactiesoort en productsoort,fout,Elke originele transactiesoort (O) in het CM heeft een productsoort in het FM,TK-nummer van elke O-transactiesoort komt als PK-nummer voor; transactiesoorten zonder nummer (xx) worden gemeld
+KERN-C-TK02,transactiesoort en productsoort,fout,Elke productsoort in het FM hoort bij een originele transactiesoort in het CM,"PK-nummer bestaat als TK-nummer in het CM, met type O"
+KERN-C-TK03,transactiesoort en productsoort,fout,Eén transactiesoort heeft één productsoort,per PK-nummer één formulering
+KERN-C-TK04,transactiesoort en productsoort,fout,Een informatielink naar TKnn in het CM veronderstelt productsoort PKnn in het FM,informatielinks naar de bank van een transactiesoort
+KERN-C-PK01,productsoort,fout,Een productsoort hangt aan het entiteittype dat de variabele in de formulering is,"naam van het gelinkte entiteittype = variabele; bij een aggregaat de componenten. Is de variabele een ouder of generalisatie, dan staat dat erbij"
+KERN-C-PK02,productsoort,waarschuwing,Een productsoort heeft één variabele (bij een aggregaat: de componenten) en eindigt op 'is/zijn <voltooid deelwoord>',telling van [..] en de vorm van het einde
+KERN-C-ES01,eigenschapsoort,fout,Beide uiteinden van een eigenschapsoort zijn een variabele in de formulering,"namen van bron en doel als [..] in de formulering; bij hetzelfde entiteittype aan beide kanten twee variabelen. Is de variabele een ouder of generalisatie, dan staat dat erbij"
+KERN-C-ES02,eigenschapsoort,fout,Aan de doelkant van een eigenschapsoort (richting van de lijn) staat 0..1 of 1..1,eindlabel van de lijn
+KERN-C-ES03,eigenschapsoort,waarschuwing,Aan de bronkant van een eigenschapsoort is de kardinaliteit ingevuld,beginlabel niet leeg of '...'
+KERN-C-AS01,attribuutsoort,fout,Elke attribuutsoort heeft een waardetype,{WAARDETYPE} achter de attribuutsoort
+KERN-C-AS02,attribuutsoort,fout,"Een attribuutsoort komt per entiteittype één keer voor, overal met hetzelfde waardetype",binnen één blok en over de diagrammen
+KERN-C-ET01,entiteittype,fout,Een entiteittype in focus (intern) heeft minstens één productsoort,data.focus = 'in'; een productsoort aan een entiteittype buiten focus mag wel. Ook gemeld als de focus per diagram verschilt
+KERN-C-ET02,entiteittype,waarschuwing,"Geen geïsoleerde entiteittypen (zonder eigenschap-, attribuut-, productsoort of afleiding)","eigenschapsoorten aan beide kanten, attribuutsoorten, productsoorten en afleidingen"
+KERN-C-NM01,naamgeving over diagrammen,fout,Een entiteittype heeft in alle diagrammen dezelfde naam,hetzelfde node-id met verschillende namen
+KERN-C-NM02,naamgeving over diagrammen,fout,"Een transactiesoort, actorrol of MTK heeft in alle CM-diagrammen hetzelfde label",hetzelfde node-id met verschillende tekst
+KERN-C-NM03,naamgeving over diagrammen,fout,Een productsoort heeft in alle FM-diagrammen hetzelfde nummer en dezelfde formulering,hetzelfde node-id (productiegebeurtenis en tekst) met verschillende tekst
+KERN-C-TL01,export (tool),waarschuwing,Geen edges naar ontbrekende nodes,per export; ook edges naar nodes die alleen in een andere export staan
+KERN-C-TL02,export (tool),waarschuwing,Geen entiteittypen met kop 'A',data.content.header = 'A'
+KERN-C-BG01,begrippenlijst,fout,Elk entiteittype heeft een begrip in de begrippenlijst,"naam = term, kern van de term (zonder kwalificatie) of synoniem; hoofdletters, spaties en streepjes tellen niet. Een afwijkende schrijfwijze wordt gemeld"
+KERN-C-BG02,begrippenlijst,fout,Specialisatie: het genus van de definitie is de ouder in het FM,genus volgens definitiekwaliteit (graaf.py)
+KERN-C-BG03,begrippenlijst,fout,"Generalisatie: de definitie somt de leden op, en een opsommende definitie is een generalisatie","opsomming volgens definitiekwaliteit (graaf.py), in beide richtingen"
+KERN-C-BG04,begrippenlijst,fout,Aggregatie: de definitie verwijst naar alle componenten,alle termen in de definitie
+KERN-C-BG05,begrippenlijst,signaal,De definitie van de eigenaar van een eigenschapsoort verwijst naar het andere entiteittype,alle termen in de definitie
+KERN-C-BG06,begrippenlijst,signaal,Begrippen zonder entiteittype,begrippen die aan geen entiteittype gekoppeld zijn

@@ -15,18 +15,19 @@ Zet het Cooperation Structure Diagram (CSD) uit een YADM-export om in twee tabel
    python -I scripts/tpt.py "<export>.json" [meer exports …]
    ```
 
-   Exports zonder CSD-elementen (bijv. een Fact Model) meldt het script en slaat het over.
+   Geef ook de feitenmodellen (FM) mee als die er zijn: het script zoekt daarin de productsoort bij elke transactiesoort. Daarvoor gebruikt het de skill `yadm-facttypes`, die in dezelfde skills-map moet staan; zonder die skill blijft de kolom Productsoort weg, met een melding. Een export zonder CSD- en zonder FM-elementen wordt gemeld en overgeslagen.
 
 2. **Presenteer per export de twee tabellen** precies zoals het script ze geeft:
 
    **Transactiesoorten**
 
-   | ID | Type | Uitvoerder | Initieert | Raadpleegt |
-   |---|---|---|---|---|
-   | TK24 | O | subsidieverlener | TK01, TK08, TK14 | MTK 15, MTK 19 |
+   | ID | Type | Productsoort | Uitvoerder | Initieert | Raadpleegt |
+   |---|---|---|---|---|---|
+   | TK24 | O | [subsidie] is verleend | subsidieverlener | TK01, TK08, TK14 | MTK 15, MTK 19 |
 
    - **ID:** `TK` + het nummer uit het model. Een transactie zonder nummer heet `TKxx`; in de kolommen Initieert en Raadpleegt staat dan de uitvoerder of naam erbij, bijvoorbeeld `TKxx (boetebetaler)`.
    - **Type:** `O` (origineel, rood), `I` (informationeel, groen) of `D` (documenteel, blauw).
+   - **Productsoort:** de formulering van PKnn uit de meegegeven feitenmodellen; leeg als die daar niet in staat. De kolom staat er alleen als er een feitenmodel is meegegeven.
    - **Uitvoerder:** de actorrol in dezelfde transactor of self-activation.
    - **Initieert:** de transactiesoorten waarvoor deze actorrol initiator is. Bij self-activation staat de eigen transactie erbij met "(zelfactiverend)".
    - **Raadpleegt:** de informatielinks van de actorrol, als `MTK nn` (multiple transaction kind) of `TKnn` (de bank van een transactiesoort).

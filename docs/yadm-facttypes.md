@@ -61,4 +61,4 @@ No dependencies beyond the Python standard library.
 
 ### Used by other skills
 
-The function `lees()` in `feittypen.py` returns the fact model as data; [`yadm-consistency`](yadm-consistency.md) uses it. Keep its result stable when changing the script.
+The function `lees()` in `feittypen.py` returns the fact model as data; [`yadm-tpt`](yadm-tpt.md) (product kinds) and [`yadm-consistency`](yadm-consistency.md) use it. Keep its result stable when changing the script.

@@ -33,7 +33,7 @@ A CSV file (UTF-8, separator `;` or `,`), a Markdown table, or a table pasted in
 
 ## Rules
 - [`regels-astra.csv`](../skills/definitiekwaliteit/references/regels-astra.csv): the ASTRA rules for definition quality ([astraonline.nl](https://www.astraonline.nl/index.php/Regels_voor_definitiekwaliteit)), unprefixed IDs
-- [`regels-aanvullend.csv`](../skills/definitiekwaliteit/references/regels-aanvullend.csv): additional rules with prefix `KERN-` and their own numbering, so they stay stable when ASTRA changes. Sources include ISO 1087/704, the OOPS! pitfall catalogue and De Haan, Krouwel & Proper (2026), *Formal Definitions of Core Concepts in Enterprise Ontology*. Examples: references must be checked against the actual source text, examples and counterexamples must be congruent with the definition, and time-dependent concepts get a `[dag]` variable.
+- [`regels-aanvullend.csv`](../skills/definitiekwaliteit/references/regels-aanvullend.csv): additional rules with IDs `KERN-D-<category><number>` (for example `KERN-D-ESS04`) and their own numbering, so they stay stable when ASTRA changes. Sources include ISO 1087/704, the OOPS! pitfall catalogue and De Haan, Krouwel & Proper (2026), *Formal Definitions of Core Concepts in Enterprise Ontology*. Examples: references must be checked against the actual source text, examples and counterexamples must be congruent with the definition, and time-dependent concepts get a `[dag]` variable.
 - [`toetsing.md`](../skills/definitiekwaliteit/references/toetsing.md): check question, signals and examples per rule
 
 ## Graph script (used by the skill)

@@ -24,6 +24,7 @@ import json
 import re
 import sys
 from collections import defaultdict
+from pathlib import Path
 
 KLEUR = {"green": "I", "blue": "D", "red": "O"}
 
@@ -123,6 +124,7 @@ def lees(pad):
         return f"MTK {m['nr']}" + (f" ({m['naam']})" if not m["nr"].isdigit() else "")
 
     initieert = defaultdict(set)   # rol-node-id -> {tk-id}
+    init_omgeving = set()          # tk-id's die een samengestelde actorrol initieert
     raadpleegt = defaultdict(set)  # rol-node-id -> {label}
     zwevend = []
     for e in edges:
@@ -138,6 +140,7 @@ def lees(pad):
             if s in rol:
                 initieert[s].add(t)
             elif s in samengesteld:
+                init_omgeving.add(t)
                 opm.append(f"{tk_label(t)} wordt geïnitieerd door de samengestelde actorrol "
                            f"'{samengesteld[s]}' (omgeving); die heeft geen eigen rij.")
             else:
@@ -156,11 +159,34 @@ def lees(pad):
             opm.append(f"Edge {ts} → {tt} ({lijn}) niet geïnterpreteerd.")
 
     return {"bestand": d.get("fileName", pad), "tk": tk, "mtk": mtk, "tk_label": tk_label,
-            "mtk_label": mtk_label, "initieert": initieert, "raadpleegt": raadpleegt,
-            "zwevend": zwevend, "log_namen": log_namen}, opm
+            "mtk_label": mtk_label, "initieert": initieert, "init_omgeving": init_omgeving,
+            "raadpleegt": raadpleegt, "zwevend": zwevend, "log_namen": log_namen}, opm
 
 
-def verwerk(pad):
+def productsoorten(paden):
+    """PK-formuleringen per TK-nummer uit de feitenmodellen tussen de exports, via de skill yadm-facttypes.
+
+    Geeft (dict nummer -> [formuleringen], gebruikte exports, opmerking)."""
+    fm = []
+    for pad in paden:
+        with open(pad, encoding="utf-8-sig") as f:
+            if {n.get("type") for n in json.load(f).get("nodes", [])} & {"entity_type", "attribute", "production_event"}:
+                fm.append(pad)
+    if not fm:
+        return {}, [], None
+    skript = Path(__file__).resolve().parents[2] / "yadm-facttypes" / "scripts"
+    if not (skript / "feittypen.py").exists():
+        return {}, [], "Productsoorten niet opgenomen: daarvoor is de skill yadm-facttypes nodig."
+    sys.path.insert(0, str(skript))
+    import feittypen
+    M = feittypen.lees(fm) or {"PK": {}}
+    pk = defaultdict(list)
+    for (nr, form), _ in sorted(M["PK"].items()):
+        pk[nr.lstrip("0") or nr].append(form or "(geen formulering)")
+    return pk, fm, None
+
+
+def verwerk(pad, pk=None):
     M, opm = lees(pad)
     if M is None:
         return None, opm
@@ -177,11 +203,15 @@ def verwerk(pad):
         init_lbl = [tk_label(x) + (" (zelfactiverend)" if x == i and t["zelf"] else "") for x in init]
         if t["zelf"] and i not in init:
             init_lbl.insert(0, f"{tk_label(i)} (zelfactiverend)")
-        rijen.append((f"TK{t['nr']}", t["type"], t["uitvoerder"], ", ".join(init_lbl),
-                      ", ".join(sorted(raadpleegt[t["uitvoerder_id"]], key=sorteer_label))))
+        rij = [f"TK{t['nr']}", t["type"], t["uitvoerder"], ", ".join(init_lbl),
+               ", ".join(sorted(raadpleegt[t["uitvoerder_id"]], key=sorteer_label))]
+        if pk:
+            rij.insert(2, " / ".join(pk.get(t["nr"].lstrip("0") or t["nr"], [])))
+        rijen.append(rij)
 
+    kop = ["ID", "Type"] + (["Productsoort"] if pk else []) + ["Uitvoerder", "Initieert", "Raadpleegt"]
     uit = [f"## {M['bestand']}", "", "### Transactiesoorten", "",
-           "| ID | Type | Uitvoerder | Initieert | Raadpleegt |", "|---|---|---|---|---|"]
+           "| " + " | ".join(kop) + " |", "|" + "---|" * len(kop)]
     uit += [f"| {' | '.join(r)} |" for r in rijen]
     uit += ["", "### MTK's", "", "| ID | Naam |", "|---|---|"]
     uit += [f"| {m['nr']} | {m['naam']} |" for m in sorted(mtk.values(), key=lambda m: (sorteer_id(m["nr"]), m["naam"]))]
@@ -211,9 +241,14 @@ def main():
     args = p.parse_args()
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
+    pk, fm, melding = productsoorten(args.exports)
     alles = []
     for pad in args.exports:
-        tabellen, opm = verwerk(pad)
+        tabellen, opm = verwerk(pad, pk)
+        if not tabellen and pad in fm:
+            continue                                   # feitenmodel: alleen gebruikt voor de productsoorten
+        if tabellen and (pk or melding):
+            opm.insert(0, melding or "Productsoorten gezocht in: " + ", ".join(Path(p).stem for p in fm) + ".")
         if tabellen:
             alles += tabellen
         if opm:

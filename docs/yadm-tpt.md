@@ -6,18 +6,19 @@ Reads a YADM export of a DEMO model (JSON) and turns its Cooperation Structure D
 
 ## Input
 
-One or more JSON exports from YADM, in React Flow format (`nodes` and `edges`). Exports without CSD elements (for example a fact model) are reported and skipped.
+One or more JSON exports from YADM, in React Flow format (`nodes` and `edges`). If you also pass the fact model exports, the table gets the product kind of each transaction kind. This uses the script of [`yadm-facttypes`](yadm-facttypes.md), which must be installed in the same skills folder; without it the column is left out with a note. Exports without CSD or fact model elements are reported and skipped.
 
 ## What it produces
 
 **Transaction kinds**
 
-| ID | Type | Uitvoerder | Initieert | Raadpleegt |
-|---|---|---|---|---|
-| TK24 | O | subsidieverlener | TK01, TK08, TK14 | MTK 15, MTK 19 |
+| ID | Type | Productsoort | Uitvoerder | Initieert | Raadpleegt |
+|---|---|---|---|---|---|
+| TK24 | O | [subsidie] is verleend | subsidieverlener | TK01, TK08, TK14 | MTK 15, MTK 19 |
 
 - **ID:** `TK` + the number in the model; `TKxx` when the model has no number yet.
 - **Type:** `O` original (red), `I` informational (green), `D` documental (blue).
+- **Productsoort:** the formulation of product kind PKnn from the fact models passed in; empty if not found there. Only shown when a fact model is passed.
 - **Uitvoerder:** the executing actor role.
 - **Initieert:** the transaction kinds this actor role initiates; for a self-activating transaction kind, the kind itself is marked "(zelfactiverend)".
 - **Raadpleegt:** the information links of the actor role, as `MTK nn` or `TKnn` (the bank of a transaction kind).
@@ -57,4 +58,4 @@ No dependencies beyond the Python standard library.
 
 ### Used by other skills
 
-The function `lees()` in `tpt.py` returns the CSD as data; [`yadm-consistency`](yadm-consistency.md) uses it. Keep its result stable when changing the script.
+The function `lees()` in `tpt.py` returns the CSD as data, including initiators; [`yadm-consistency`](yadm-consistency.md) uses it. Keep its result stable when changing the script.

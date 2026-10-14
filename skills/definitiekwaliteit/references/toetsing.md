@@ -3,7 +3,7 @@
 Per regel: de toetsvraag, signalen die op een schending wijzen, en een voorbeeld.
 
 - Regels zonder prefix komen uit ASTRA (`regels-astra.csv`).
-- Regels met prefix `KERN-` zijn aanvullingen (`regels-aanvullend.csv`). Ze hebben een eigen nummering, zodat wijzigingen in de ASTRA-set ze niet raken.
+- Regels met prefix `KERN-D-` zijn aanvullingen (`regels-aanvullend.csv`). Ze hebben een eigen nummering, `KERN-D-<categorie><volgnummer>` (bijv. `KERN-D-ESS04`), zodat wijzigingen in de ASTRA-set ze niet raken. `D` staat voor definities; andere KERN-skills gebruiken een eigen letter, zodat id's over de skills uniek zijn.
 
 Niveau geeft aan waar de regel getoetst wordt:
 - **D**: per definitie, los van de rest van de lijst
@@ -22,15 +22,15 @@ Niveau geeft aan waar de regel getoetst wordt:
 - **Signalen:** geen bronvermelding; een eigen formulering terwijl een wettelijke definitie bestaat.
 - Zonder brongegevens: geef als oordeel `niet toetsbaar` en noem welke bron voor de hand ligt.
 
-### KERN-CON-01 Traceerbaar naar vindplaats — D/B
+### KERN-D-CON01 Traceerbaar naar vindplaats — D/B
 - **Toetsvraag:** Kun je de vindplaats (versie, artikel, lid, pagina, zin) van de definitie terugvinden?
 - **Signalen:** alleen een documentnaam of hoofdstuk; bij een wetsvoorstel geen kamerstuknummer; helemaal geen bron.
 
-### KERN-CON-02 Domein expliciet afgebakend — L
+### KERN-D-CON02 Domein expliciet afgebakend — L
 - **Toetsvraag:** Is benoemd voor welk domein of welke context de lijst, of deze definitie, geldt?
 - Het volstaat als dit één keer voor de hele lijst is vastgelegd. Rapporteer het dan als één bevinding voor de lijst.
 
-### KERN-CON-03 Referentie inhoudelijk correct — B
+### KERN-D-CON03 Referentie inhoudelijk correct — B
 - **Toetsvraag:** Klopt de referentie *inhoudelijk*? Controleer drie dingen:
   1. **Bestaat** de bron, en bestaat de genoemde vindplaats (artikel, lid, pagina)?
   2. **Is het de geldende versie?** Is de wet, regeling of norm niet vervangen of vernummerd?
@@ -65,30 +65,30 @@ Niveau geeft aan waar de regel getoetst wordt:
 - **Toetsvraag:** Past de definitie ook op een ander begrip in de lijst of het domein?
 - **Signalen:** twee definities die (bijna) inwisselbaar zijn; een definitie die alleen uit het genus bestaat.
 
-### KERN-ESS-01 Geen tegenstrijdige kenmerken — D
+### KERN-D-ESS01 Geen tegenstrijdige kenmerken — D
 - **Toetsvraag:** Sluiten kenmerken binnen de definitie elkaar uit?
 - **Voorbeeld:** "(… TK/EP/PS …)" in een definitie waarvan het genus juist niet voor de TK geregistreerd is.
 - Strijdigheid met het hoofdbegrip toets je onder SAM-02, met samenstellende begrippen onder SAM-04.
 
-### KERN-ESS-02 Voorbeelden en tegenvoorbeelden congruent met definitie — D
+### KERN-D-ESS02 Voorbeelden en tegenvoorbeelden congruent met definitie — D
 - **Toetsvraag:**
   - Voldoet elk gegeven **voorbeeld** aan *alle* kenmerken van de definitie, inclusief die van het genus?
   - Schendt elk gegeven **tegenvoorbeeld** ten minste één kenmerk? Noem welk kenmerk. Een tegenvoorbeeld dat toch aan de definitie voldoet, wijst op een te ruime definitie of een fout tegenvoorbeeld.
   - Is het voorbeeld van het **juiste niveau**? Bij een type hoort een instantie, geen subtype (zie ESS-02), en geen aantal ("1 per gemeente"). "Personenauto" is een specialisatie van "voertuig", geen voorbeeld. "De auto met kenteken AB-123-C" is wel een voorbeeld.
 - **Te ruim/te eng:** bedenk zelf een randgeval. Valt het onder de definitie terwijl dat niet de bedoeling lijkt (te ruim)? Of erbuiten terwijl het er duidelijk bij hoort (te eng)? Vermeld dat het randgeval van jou is.
 
-### KERN-ESS-03 Voorbeeld en tegenvoorbeeld aanwezig — D
+### KERN-D-ESS03 Voorbeeld en tegenvoorbeeld aanwezig — D
 - **Toetsvraag:** Is er ten minste één voorbeeld? Is er een tegenvoorbeeld als het begrip nauw verwante begrippen heeft (siblings onder hetzelfde genus, of begrippen die in de praktijk verward worden)?
 - Een goed tegenvoorbeeld valt er *net* buiten: het deelt het genus maar mist één onderscheidend kenmerk. "Een boom" is geen bruikbaar tegenvoorbeeld van "strafzaak"; "een civiele zaak" wel.
 - Ontbreekt de kolom voor (tegen)voorbeelden in de hele lijst, maak dan één opmerking voor de lijst, maar stel per begrip wel voorbeelden voor (zie SKILL.md, stap 4).
 
-### KERN-ESS-04 Tijdsafhankelijkheid via variabele — D/L
+### KERN-D-ESS04 Tijdsafhankelijkheid via variabele — D/L
 - **Toetsvraag:** Kan dezelfde instantie op de ene dag wel en op een andere dag niet onder het begrip vallen? Zo ja: bevatten term en definitie een variabele [dag]?
 - **Signalen dat een begrip tijdsafhankelijk is:** registratie, inschrijving of lidmaatschap dat begint en eindigt; status die volgt uit een gebeurtenis ("na de verkiezing", "laatstgehouden"); "op moment", "betreffende", "dan", "huidig", "actief".
 - **Signalen dat het tijdstip verkeerd zit:** een concreet moment of een concrete periode in de definitie ("in het subsidiejaar", "op de peildatum"). Dat hoort in de regel die het begrip gebruikt.
 - **Granulariteit:** gebruik [dag]. Jaren en perioden maak je in de regels ("op elke dag van het kalenderjaar", "op de peildatum").
 - **Voorbeeld:** "landelijke politieke vereniging op [dag]: politieke vereniging op [dag] waarvan de aanduiding is ingeschreven voor verkiezingen van de leden van de Tweede Kamer, de Eerste Kamer of het Europees Parlement".
-- **Doorwerking:** (tegen)voorbeelden vermelden de dag ("VVD — LPV op 1 januari 2026"); disjunctheid (KERN-SAM-03) geldt per dag.
+- **Doorwerking:** (tegen)voorbeelden vermelden de dag ("VVD — LPV op 1 januari 2026"); disjunctheid (KERN-D-SAM03) geldt per dag.
 
 ## Interne kwaliteit van de definitie
 
@@ -129,12 +129,12 @@ Niveau geeft aan waar de regel getoetst wordt:
 - **Toetsvraag:** Leunt de definitie op interne documenten, werkinstructies of kennis die niet openbaar is?
 - **Signalen:** "conform het interne beleid", "volgens werkinstructie X", "cf tabel uit wet".
 
-### KERN-INT-01 Substitueerbaar — D
+### KERN-D-INT01 Substitueerbaar — D
 - **Toetsvraag:** Kun je de term in een zin vervangen door de definitie zonder dat de zin onjuist of ongrammaticaal wordt?
 - **Signalen:** begint met "is", "een", "de", "het"; een andere woordsoort dan de term (bijvoorbeeld een werkwoord gedefinieerd met een zelfstandig naamwoord); eindigt met een punt.
 - Enkelvoud toets je onder VER-02, starten met een naamwoord onder STR-01.
 
-### KERN-INT-02 Geen restcategorie — D
+### KERN-D-INT02 Geen restcategorie — D
 - **Toetsvraag:** Beschrijft de definitie een restcategorie?
 - **Signalen:** "overig", "alle andere", "anders dan de bovenstaande", "rest".
 - Dubbelzinnige "en" of "of" toets je onder STR-08 en STR-09.
@@ -177,19 +177,19 @@ Niveau geeft aan waar de regel getoetst wordt:
 - **Toetsvraag:** Hebben twee termen in de lijst inhoudelijk dezelfde definitie? Zijn als synoniem opgegeven termen echt gelijkwaardig?
 - Advies: één begrip met één definitie; de andere termen als synoniem. Een "synoniem" dat ruimer of enger is (bv. "overheidsorganisatie" bij "openbaar lichaam") is geen synoniem.
 
-### KERN-SAM-01 Eén term, één begrip — L
+### KERN-D-SAM01 Eén term, één begrip — L
 - **Toetsvraag:** Staat een term binnen één context voor meer dan één begrip? Wordt een term in definities of toelichtingen in een andere betekenis gebruikt dan zijn eigen definitie?
 - Verschillende betekenissen over contexten heen vallen onder CON-01; een gebruikt begrip dat wordt opgerekt onder SAM-07.
 
-### KERN-SAM-02 Gebruikte begrippen gedefinieerd of vanzelfsprekend — L
+### KERN-D-SAM02 Gebruikte begrippen gedefinieerd of vanzelfsprekend — L
 - **Toetsvraag:** Is elk vakbegrip in een definitie zelf gedefinieerd, of algemeen bekend op B1-niveau?
 - Rapporteer ontbrekende begrippen één keer, met de definities waarin ze voorkomen (uit `graaf.md`).
 
-### KERN-SAM-03 Onderverdeling disjunct en volledig vastgelegd — L
+### KERN-D-SAM03 Onderverdeling disjunct en volledig vastgelegd — L
 - **Toetsvraag:** Als meerdere begrippen hetzelfde genus hebben: is vastgelegd of zij elkaar uitsluiten en of zij samen het genus dekken? Klopt dat met de definities?
 - Bij tijdsafhankelijke begrippen geldt dit per moment.
 
-### KERN-SAM-04 Geen impliciete begrippen — L
+### KERN-D-SAM04 Geen impliciete begrippen — L
 - **Toetsvraag:** Veronderstellen de definities een begrip dat geen term heeft, zoals een gemeenschappelijk genus van meerdere begrippen, of de tegenhanger van een gedefinieerde specialisatie?
 - Dit is een advies, geen fout: stel een term voor en markeer die als voorstel.
 
@@ -201,7 +201,7 @@ Niveau geeft aan waar de regel getoetst wordt:
 - Uitzondering: een werkwoord-term wordt gedefinieerd met een werkwoordgroep (zie VER-03).
 - **Let op bij variabelen:** "politieke vereniging op [dag] waarvan …" begint met het naamwoord "politieke vereniging"; de variabele hoort bij die naamwoordgroep.
 
-### KERN-STR-01 Variabelen gebonden en getypeerd — D
+### KERN-D-STR01 Variabelen gebonden en getypeerd — D
 - **Toetsvraag:**
   - Komt elke variabele `[…]` uit de definitie ook in de term voor, en omgekeerd?
   - Is de naam van elke variabele een term uit de lijst ([vertegenwoordigend orgaan]) of een B1-woord ([dag])?
@@ -263,19 +263,19 @@ Rapporten van vóór oktober 2026 gebruiken de oude nummers. Omzetting:
 
 | Oud | Nieuw | Toelichting |
 |---|---|---|
-| CON-03 | KERN-CON-01 | |
-| CON-04 | KERN-CON-02 | |
-| CON-05 | KERN-CON-03 | |
+| CON-03 | KERN-D-CON01 | |
+| CON-04 | KERN-D-CON02 | |
+| CON-05 | KERN-D-CON03 | |
 | ESS-06 | vervallen → STR-04 | genus + onderscheidend kenmerk zit in ASTRA STR-04 |
-| ESS-07 | KERN-ESS-01 | ingeperkt tot strijdigheid binnen de definitie (rest: SAM-02, SAM-04) |
-| ESS-08 | KERN-ESS-02 | |
-| ESS-09 | KERN-ESS-03 | |
+| ESS-07 | KERN-D-ESS01 | ingeperkt tot strijdigheid binnen de definitie (rest: SAM-02, SAM-04) |
+| ESS-08 | KERN-D-ESS02 | |
+| ESS-09 | KERN-D-ESS03 | |
 | INT-11 | vervallen → SAM-05, STR-02, STR-03 | zelfverwijzing valt onder ASTRA SAM-05 |
-| INT-12 | KERN-INT-01 | enkelvoud-deel valt onder VER-02 |
-| INT-13 | KERN-INT-02 | ingeperkt tot restcategorie; 'en/of' valt onder STR-08/STR-09 |
+| INT-12 | KERN-D-INT01 | enkelvoud-deel valt onder VER-02 |
+| INT-13 | KERN-D-INT02 | ingeperkt tot restcategorie; 'en/of' valt onder STR-08/STR-09 |
 | SAM-05 (oud) | vervallen → SAM-05 (ASTRA) | zelfde inhoud, nu ASTRA-regel |
-| SAM-06 (oud) | KERN-SAM-01 | |
+| SAM-06 (oud) | KERN-D-SAM01 | |
 | SAM-07 (oud) | vervallen → SAM-06, SAM-08 (ASTRA) | |
-| SAM-08 (oud) | KERN-SAM-02 | |
-| SAM-09 (oud) | KERN-SAM-03 | |
-| SAM-10 (oud) | KERN-SAM-04 | |
+| SAM-08 (oud) | KERN-D-SAM02 | |
+| SAM-09 (oud) | KERN-D-SAM03 | |
+| SAM-10 (oud) | KERN-D-SAM04 | |

@@ -195,15 +195,15 @@ def extract(args):
         w.writerows(randen)
     print(f"{len(randen)} kandidaat-randen voor {len(begrippen)} begrippen geschreven naar {args.output}")
 
-    # KERN-STR-01: variabelen gebonden (in term én definitie) en getypeerd (term uit de lijst)
+    # KERN-D-STR01: variabelen gebonden (in term én definitie) en getypeerd (term uit de lijst)
     var = lambda s: {norm(v) for v in re.findall(r"\[([^\]]+)\]", s)}
     bekend = {norm(b["term"]) for b in begrippen} | {norm(kern(b["term"])) for b in begrippen}
     for b in begrippen:
         vt, vd = var(b["term"]), var(b["definitie"])
         if vt != vd:
-            print(f"KERN-STR-01: '{b['term']}': variabelen in term {sorted(vt)} ≠ in definitie {sorted(vd)}")
+            print(f"KERN-D-STR01: '{b['term']}': variabelen in term {sorted(vt)} ≠ in definitie {sorted(vd)}")
         for v in sorted((vt | vd) - bekend):
-            print(f"KERN-STR-01 (controleer): '{b['term']}': variabele [{v}] is geen term uit de lijst (B1-woord?)")
+            print(f"KERN-D-STR01 (controleer): '{b['term']}': variabele [{v}] is geen term uit de lijst (B1-woord?)")
     print("Controleer de randen handmatig voordat je 'analyse' draait.")
 
 
@@ -477,7 +477,7 @@ def analyse(args):
     uit.append(f"- Zelfverwijzingen (SAM-05): {len(zelf)}")
     uit.append(f"- Kringen over meerdere begrippen (SAM-05): {len(alle_kringen)}"
                + (f" (afgekapt op {MAX_KRINGEN})" if len(alle_kringen) >= MAX_KRINGEN else ""))
-    uit.append(f"- Ontbrekende begrippen (KERN-SAM-02): {len(ontbrekend)}\n")
+    uit.append(f"- Ontbrekende begrippen (KERN-D-SAM02): {len(ontbrekend)}\n")
 
     if zelf:
         uit.append("## Zelfverwijzingen\n")

@@ -10,11 +10,12 @@ Bouwt voort op de zusterskills (in dezelfde skills-map geïnstalleerd):
 - definitiekwaliteit (scripts/graaf.py)      leest de begrippenlijst en het genus per definitie
                                              (alleen nodig met -b)
 
-De regels staan in REGELS hieronder en in SKILL.md. Uitvoer: een samenvatting per regel en een
+De regels staan in references/regels.csv; de id's in deze code verwijzen daarnaar. Uitvoer: een samenvatting per regel en een
 tabel met bevindingen (Regel | Element | Bevinding | Bron).
 """
 
 import argparse
+import csv
 import json
 import re
 import sys
@@ -36,30 +37,9 @@ def importeer(skill, module):
 tpt = importeer("yadm-tpt", "tpt")
 feittypen = importeer("yadm-facttypes", "feittypen")
 
-# (id, ernst, omschrijving)
-REGELS = [
-    ("CON-01", "fout", "Elke originele transactiesoort (O) in het CM heeft een productsoort in het FM"),
-    ("CON-02", "fout", "Elke productsoort in het FM hoort bij een originele transactiesoort in het CM"),
-    ("CON-03", "fout", "Eén transactiesoort heeft één productsoort (één formulering per PK-nummer)"),
-    ("CON-04", "fout", "Een informatielink naar TKnn in het CM veronderstelt productsoort PKnn in het FM"),
-    ("CON-05", "fout", "Een productsoort hangt aan het entiteittype dat de variabele in de formulering is"),
-    ("CON-06", "waarschuwing", "Een productsoort heeft één variabele (bij een aggregaat: de componenten) en eindigt op 'is/zijn <voltooid deelwoord>'"),
-    ("CON-07", "fout", "Beide uiteinden van een eigenschapsoort zijn een variabele in de formulering"),
-    ("CON-08", "fout", "Aan de doelkant van een eigenschapsoort (richting van de lijn) staat 0..1 of 1..1"),
-    ("CON-09", "waarschuwing", "Aan de bronkant van een eigenschapsoort is de kardinaliteit ingevuld"),
-    ("CON-10", "fout", "Elke attribuutsoort heeft een waardetype"),
-    ("CON-11", "fout", "Een attribuutsoort komt per entiteittype één keer voor, overal met hetzelfde waardetype"),
-    ("CON-12", "fout", "Een entiteittype in focus (intern) heeft minstens één productsoort"),
-    ("CON-13", "waarschuwing", "Geen geïsoleerde entiteittypen (zonder eigenschap-, attribuut-, productsoort of afleiding)"),
-    ("CON-14", "fout", "Een element heeft in alle diagrammen dezelfde naam"),
-    ("CON-15", "waarschuwing", "Geen edges naar ontbrekende nodes en geen entiteittypen met kop 'A'"),
-    ("BEG-01", "fout", "Elk entiteittype heeft een begrip in de begrippenlijst"),
-    ("BEG-02", "fout", "Specialisatie: het genus van de definitie is de ouder in het FM"),
-    ("BEG-03", "fout", "Generalisatie: de definitie somt de leden op, en een opsommende definitie is een generalisatie"),
-    ("BEG-04", "fout", "Aggregatie: de definitie verwijst naar alle componenten"),
-    ("BEG-05", "signaal", "De definitie van de eigenaar van een eigenschapsoort verwijst naar het andere entiteittype"),
-    ("BEG-06", "signaal", "Begrippen zonder entiteittype"),
-]
+# regels: references/regels.csv (Id, Categorie, Ernst, Regel, Controle)
+with open(Path(__file__).resolve().parents[1] / "references" / "regels.csv", newline="", encoding="utf-8-sig") as f:
+    REGELS = [(r["Id"], r["Ernst"], r["Regel"]) for r in csv.DictReader(f)]
 
 norm = lambda s: re.sub(r"\s+", " ", re.sub(r"[-_]", " ", (s or "").lower())).strip()
 var = lambda form: [norm(re.sub(r"^set van ", "", v.strip(), flags=re.I)) for v in re.findall(r"\[([^\]]+)\]", form or "")]
@@ -89,6 +69,10 @@ def controleer(paden, begrippenlijst=None):
         for i, t in M["tk"].items():
             TK.setdefault(nr(t["nr"]), t["type"])
             TK_BRON[nr(t["nr"])].add(M["bestand"])
+        geinitieerd = set().union(*M["initieert"].values(), M["init_omgeving"])
+        for i, t in sorted(M["tk"].items(), key=lambda x: tpt.sorteer_id(x[1]["nr"])):
+            if not t["zelf"] and i not in geinitieerd:
+                B.append(("KERN-C-CM01", M["tk_label"](i), f"geen initiator (uitvoerder: {t['uitvoerder']})", M["bestand"]))
         rolnaam = {t["uitvoerder_id"]: t["uitvoerder"] for t in M["tk"].values()}
         for rol, labels in M["raadpleegt"].items():
             RAADPLEEG += [(l, rolnaam.get(rol, "?"), M["bestand"]) for l in labels if l.startswith("TK")]
@@ -103,29 +87,29 @@ def controleer(paden, begrippenlijst=None):
         pk_nrs[nr(tk)].add(form)
 
     if not cm_paden:
-        niet.append("CON-01 t/m CON-04: geen CM (CSD) in de exports")
-        overgeslagen |= {"CON-01", "CON-02", "CON-03", "CON-04"}
+        niet.append("CM01, TK01, TK02, TK04 en NM02: geen CM (CSD) in de exports")
+        overgeslagen |= {"KERN-C-CM01", "KERN-C-TK01", "KERN-C-TK02", "KERN-C-TK04", "KERN-C-NM02"}
     if not F:
-        niet.append("CON-01 t/m CON-14 en BEG: geen feitenmodel in de exports")
-        overgeslagen |= {r for r, _, _ in REGELS if r != "CON-15"}
+        niet.append("TK, PK, ES, AS, ET, NM01, NM03, TL02 en BG: geen feitenmodel in de exports")
+        overgeslagen |= {r for r, _, _ in REGELS if r not in ("KERN-C-CM01", "KERN-C-NM02", "KERN-C-TL01")}
     if cm_paden and F:
         for n_, t in sorted(TK.items(), key=lambda x: tpt.sorteer_id(x[0])):
             if not n_.isdigit():
-                B.append(("CON-01", f"TK{n_}", "transactiesoort zonder nummer; niet te controleren", br(TK_BRON[n_])))
+                B.append(("KERN-C-TK01", f"TK{n_}", "transactiesoort zonder nummer; niet te controleren", br(TK_BRON[n_])))
             elif t == "O" and n_ not in pk_nrs:
-                B.append(("CON-01", f"TK{n_}", "geen productsoort PK" + n_ + " in het FM", br(TK_BRON[n_])))
+                B.append(("KERN-C-TK01", f"TK{n_}", "geen productsoort PK" + n_ + " in het FM", br(TK_BRON[n_])))
         for (tk, form), v in sorted(PK.items()):
             if nr(tk) not in TK:
-                B.append(("CON-02", f"{form} (PK{tk})", f"geen transactiesoort TK{tk} in het CM", br(v["bron"])))
+                B.append(("KERN-C-TK02", f"{form} (PK{tk})", f"geen transactiesoort TK{tk} in het CM", br(v["bron"])))
             elif TK[nr(tk)] != "O":
-                B.append(("CON-02", f"{form} (PK{tk})", f"TK{tk} is van type {TK[nr(tk)]}, niet O", br(v["bron"])))
+                B.append(("KERN-C-TK02", f"{form} (PK{tk})", f"TK{tk} is van type {TK[nr(tk)]}, niet O", br(v["bron"])))
         for l, rol, bron in sorted(set(RAADPLEEG)):
             m = re.match(r"TK(\d+)", l)
             if m and nr(m.group(1)) not in pk_nrs:
-                B.append(("CON-04", l, f"{rol} raadpleegt de bank van {l}, maar PK{m.group(1)} staat niet in het FM", bron))
+                B.append(("KERN-C-TK04", l, f"{rol} raadpleegt de bank van {l}, maar PK{m.group(1)} staat niet in het FM", bron))
     for tk, forms in sorted(pk_nrs.items()):
         if len(forms) > 1:
-            B.append(("CON-03", f"PK{tk}", "meerdere formuleringen: " + " / ".join(sorted(forms)),
+            B.append(("KERN-C-TK03", f"PK{tk}", "meerdere formuleringen: " + " / ".join(sorted(forms)),
                       br(set().union(*(PK[(k, f)]["bron"] for (k, f) in PK if nr(k) == tk)))))
 
     # voorouders (specialisatie -> ouder, lid -> generalisatie) en componenten van aggregaten
@@ -155,18 +139,18 @@ def controleer(paden, begrippenlijst=None):
         doel = sorted(v["lijn"]) or sorted(v["ouder"])
         agg = [x for x in doel if comp(x)]
         if not doel:
-            B.append(("CON-05", el, "productsoort hangt aan geen entiteittype", br(v["bron"])))
+            B.append(("KERN-C-PK01", el, "productsoort hangt aan geen entiteittype", br(v["bron"])))
         elif agg and len(vs) > 1:
             mist = [c for c in comp(agg[0]) if norm(c) not in vs]
             if mist:
-                B.append(("CON-05", el, f"hangt aan aggregaat {agg[0]}; component(en) {', '.join(mist)} niet als "
+                B.append(("KERN-C-PK01", el, f"hangt aan aggregaat {agg[0]}; component(en) {', '.join(mist)} niet als "
                           f"variabele (variabelen: {fmt(vs)})", br(v["bron"])))
         elif not any(norm(x) in vs for x in doel):
-            B.append(("CON-05", el, f"hangt aan {', '.join(doel)}, maar de variabele is {fmt(vs)}"
+            B.append(("KERN-C-PK01", el, f"hangt aan {', '.join(doel)}, maar de variabele is {fmt(vs)}"
                       + hint(doel[0], vs), br(v["bron"])))
         n_ok = len(comp(agg[0])) if agg else 1
         if len(vs) != n_ok or not re.search(r"\b(is|zijn)\s+\S+$", form):
-            B.append(("CON-06", el, f"{len(vs)} variabele(n), verwacht {n_ok}"
+            B.append(("KERN-C-PK02", el, f"{len(vs)} variabele(n), verwacht {n_ok}"
                       if len(vs) != n_ok else "eindigt niet op 'is/zijn <voltooid deelwoord>'", br(v["bron"])))
 
     # eigenschapsoorten
@@ -177,20 +161,20 @@ def controleer(paden, begrippenlijst=None):
         el = form or f"(geen formulering: {van} → {naar})"
         vs = var(form)
         if not form:
-            B.append(("CON-07", el, "eigenschapsoort zonder formulering", br(bron)))
+            B.append(("KERN-C-ES01", el, "eigenschapsoort zonder formulering", br(bron)))
         elif form.count("[") != form.count("]"):
-            B.append(("CON-07", el, "haken [ ] niet in evenwicht", br(bron)))
+            B.append(("KERN-C-ES01", el, "haken [ ] niet in evenwicht", br(bron)))
         else:
             mist = [x for x in dict.fromkeys((van, naar)) if norm(x) not in vs]
             if van == naar and len(vs) < 2:
                 mist = [van]
             if mist:
-                B.append(("CON-07", el, f"{' en '.join(mist)} niet als variabele in de formulering "
+                B.append(("KERN-C-ES01", el, f"{' en '.join(mist)} niet als variabele in de formulering "
                           f"(variabelen: {fmt(vs)})" + "".join(hint(x, vs) for x in mist), br(bron)))
         if not feittypen.max1(kn):
-            B.append(("CON-08", el, f"{van} → {naar}: doelkant is '{kn or 'leeg'}', verwacht 0..1 of 1..1", br(bron)))
+            B.append(("KERN-C-ES02", el, f"{van} → {naar}: doelkant is '{kn or 'leeg'}', verwacht 0..1 of 1..1", br(bron)))
         if not kv:
-            B.append(("CON-09", el, f"{van} → {naar}: kardinaliteit aan de bronkant ontbreekt", br(bron)))
+            B.append(("KERN-C-ES03", el, f"{van} → {naar}: kardinaliteit aan de bronkant ontbreekt", br(bron)))
 
     # attribuutsoorten
     for nm, e in sorted(ET.items()):
@@ -198,12 +182,12 @@ def controleer(paden, begrippenlijst=None):
         for (a, w), bron in e["attrs"].items():
             per_naam[a.lower()].add(w)
             if not w:
-                B.append(("CON-10", f"{a} van [{nm.lower()}]", "geen waardetype", br(bron)))
+                B.append(("KERN-C-AS01", f"{a} van [{nm.lower()}]", "geen waardetype", br(bron)))
         for a in sorted(e["dubbel"]):
-            B.append(("CON-11", f"{a} van [{nm.lower()}]", "komt meer dan één keer voor in hetzelfde blok", br(e["bron"])))
+            B.append(("KERN-C-AS02", f"{a} van [{nm.lower()}]", "komt meer dan één keer voor in hetzelfde blok", br(e["bron"])))
         for a, ws in sorted(per_naam.items()):
             if len(ws - {""}) > 1:
-                B.append(("CON-11", f"{a} van [{nm.lower()}]", "verschillende waardetypen: " + ", ".join(sorted(ws - {""})), br(e["bron"])))
+                B.append(("KERN-C-AS02", f"{a} van [{nm.lower()}]", "verschillende waardetypen: " + ", ".join(sorted(ws - {""})), br(e["bron"])))
 
     # entiteittypen: focus, isolement
     heeft_pk = defaultdict(set)
@@ -215,28 +199,55 @@ def controleer(paden, begrippenlijst=None):
     for nm, e in sorted(ET.items()):                    # focus 'in' = intern (wit), 'out' = extern (grijs)
         f = e["focus"]
         if len(f) > 1:
-            B.append(("CON-12", ster(nm), "focus verschilt per diagram: " + "; ".join(
+            B.append(("KERN-C-ET01", ster(nm), "focus verschilt per diagram: " + "; ".join(
                 f"{k or 'geen'} ({', '.join(sorted(v))})" for k, v in sorted(f.items())), br(e["bron"])))
         if "in" in f and not heeft_pk[nm]:              # een productsoort aan een extern entiteittype mag wel
-            B.append(("CON-12", ster(nm), "in focus (intern) maar geen productsoort", br(e["bron"])))
+            B.append(("KERN-C-ET01", ster(nm), "in focus (intern) maar geen productsoort", br(e["bron"])))
     for nm, e in sorted(ET.items()):
         if not e["attrs"] and nm not in in_pt and not heeft_pk[nm] and nm not in in_afl:
-            B.append(("CON-13", ster(nm), "geen eigenschap-, attribuut- of productsoort en geen afleiding", br(e["bron"])))
+            B.append(("KERN-C-ET02", ster(nm), "geen eigenschap-, attribuut- of productsoort en geen afleiding", br(e["bron"])))
 
     # namen en hygiëne
     for canon, namen in (F["conflicten"] if F else []):
-        B.append(("CON-14", canon, "heet ook: " + "; ".join(f"{n} ({', '.join(k)})" for n, k in namen.items() if n != canon),
+        B.append(("KERN-C-NM01", canon, "heet ook: " + "; ".join(f"{n} ({', '.join(k)})" for n, k in namen.items() if n != canon),
                   br(set().union(*namen.values()))))
+    def labels(paden, soorten, tekst):
+        """Node-id's van de gegeven soorten met per export een ander label: {id: {label: {exports}}}."""
+        per = defaultdict(lambda: defaultdict(set))
+        for p in paden:
+            nodes = data[p].get("nodes", [])
+            kind = defaultdict(list)
+            for n in nodes:
+                if n.get("parentId"):
+                    kind[n["parentId"]].append(n)
+            for n in nodes:
+                if n["type"] in soorten:
+                    per[n["id"]][tekst(n, kind)].add(naam(p))
+        return [l for l in per.values() if len(l) > 1]
+    SOORT = {"transaction": "transactiesoort", "actor": "actorrol", "multiple_transaction_kind": "MTK"}
+    def cm_tekst(n, kind):
+        t = " ".join(tpt.tekstregels(n["data"].get("content")))
+        return f"{SOORT[n['type']]} {'TK' if n['type'] == 'transaction' else ''}{t}"
+    def pk_tekst(n, kind):
+        txt = [k for k in kind[n["id"]] if k["type"] == "text"]
+        form = feittypen.schoon(feittypen.plak(feittypen.regels(feittypen.inhoud(txt[0]).get("body")))) if txt else ""
+        return f"{form or '(geen formulering)'} (PK{''.join(feittypen.regels(feittypen.inhoud(n).get('body')))})"
+    for regel, paden, soorten, tekst in (("KERN-C-NM02", cm_paden, set(SOORT), cm_tekst),
+                                         ("KERN-C-NM03", fm_paden, {"production_event"}, pk_tekst)):
+        for l in labels(paden, soorten, tekst):
+            meest = max(l, key=lambda x: len(l[x]))
+            B.append((regel, meest, "label verschilt per diagram: " + "; ".join(
+                f"{x} ({', '.join(sorted(e))})" for x, e in sorted(l.items())), br(set().union(*l.values()))))
     overal = {n["id"] for d in data.values() for n in d.get("nodes", [])}
     for p, d in data.items():
         ids = {n["id"] for n in d.get("nodes", [])}
         los = [e for e in d.get("edges", []) if e["source"] not in ids or e["target"] not in ids]
         if los:
             elders = sum(1 for e in los if all(x in overal for x in (e["source"], e["target"])))
-            B.append(("CON-15", naam(p), f"{len(los)} edges naar ontbrekende nodes"
+            B.append(("KERN-C-TL01", naam(p), f"{len(los)} edges naar ontbrekende nodes"
                       + (f", waarvan {elders} naar nodes in een andere export" if elders else ""), naam(p)))
     for kort, i, nm in (F["kop_a"] if F else []):
-        B.append(("CON-15", nm, f"entiteittype met kop 'A' (node {i})", kort))
+        B.append(("KERN-C-TL02", nm, f"entiteittype met kop 'A' (node {i})", kort))
 
     # ---------- begrippenlijst ----------
     if begrippenlijst and F:
@@ -256,11 +267,11 @@ def controleer(paden, begrippenlijst=None):
         bron_lijst = Path(begrippenlijst).name
         for nm in sorted(ET):
             if not term[nm]:
-                B.append(("BEG-01", ster(nm), "geen begrip gevonden (op term, kern of synoniem)", bron_lijst))
+                B.append(("KERN-C-BG01", ster(nm), "geen begrip gevonden (op term, kern of synoniem)", bron_lijst))
             else:
                 exact = [t for t in term[nm] if t.lower() == nm.lower()]
                 if not exact:
-                    B.append(("BEG-01", ster(nm), "gekoppeld aan " + ", ".join(sorted(term[nm]))
+                    B.append(("KERN-C-BG01", ster(nm), "gekoppeld aan " + ", ".join(sorted(term[nm]))
                               + " (schrijfwijze of kwalificatie verschilt)", bron_lijst))
         for (s, x), ys in sorted(AFL.items()):
             if not ys or x not in ET or not term[x]:
@@ -270,28 +281,28 @@ def controleer(paden, begrippenlijst=None):
                 ouders = termen(ys)
                 genus = set().union(*(uit[t]["genus"] for t in tx))
                 if not ouders:
-                    B.append(("BEG-02", ster(x), f"ouder {', '.join(sorted(ys))} heeft geen begrip", bron_lijst))
+                    B.append(("KERN-C-BG02", ster(x), f"ouder {', '.join(sorted(ys))} heeft geen begrip", bron_lijst))
                 elif not genus & ouders:
-                    B.append(("BEG-02", ster(x), f"FM: specialisatie van {', '.join(sorted(ys))}; genus in de definitie: "
+                    B.append(("KERN-C-BG02", ster(x), f"FM: specialisatie van {', '.join(sorted(ys))}; genus in de definitie: "
                               + (", ".join(sorted(genus)) or "niet herkend"), bron_lijst))
             elif s == "generalisatie":
                 leden = termen(ys)
                 ops = set().union(*(uit[t]["opsomming"] for t in tx))
                 if ops != leden:
-                    B.append(("BEG-03", ster(x), f"FM: generalisatie van {', '.join(sorted(ys))}; opsomming in de definitie: "
+                    B.append(("KERN-C-BG03", ster(x), f"FM: generalisatie van {', '.join(sorted(ys))}; opsomming in de definitie: "
                               + (", ".join(sorted(ops)) or "geen"), bron_lijst))
             elif s == "aggregatie":
                 comp = termen(ys)
                 alle = set().union(*(set().union(*uit[t].values()) for t in tx))
                 mist = sorted(comp - alle)
                 if mist or len(comp) < len(ys):
-                    B.append(("BEG-04", ster(x), f"FM: aggregatie van {' × '.join(sorted(ys))}; definitie verwijst niet naar "
+                    B.append(("KERN-C-BG04", ster(x), f"FM: aggregatie van {' × '.join(sorted(ys))}; definitie verwijst niet naar "
                               + ", ".join(mist + [y for y in sorted(ys) if not term.get(y)]), bron_lijst))
         gen = {x for (s, x), ys in AFL.items() if s == "generalisatie" and ys}
         for nm in sorted(ET):
             for t in sorted(term[nm]):
                 if uit[t]["opsomming"] and nm not in gen:
-                    B.append(("BEG-03", ster(nm), f"definitie van '{t}' is een opsomming ("
+                    B.append(("KERN-C-BG03", ster(nm), f"definitie van '{t}' is een opsomming ("
                               + ", ".join(sorted(uit[t]["opsomming"])) + "), maar het FM heeft geen generalisatie", bron_lijst))
         for l in sorted({(l["van"], l["naar"], l["form"]) for l in F["PT_LIJNEN"]}):
             van, naar, form = l
@@ -299,17 +310,20 @@ def controleer(paden, begrippenlijst=None):
                 continue
             alle = set().union(*(set().union(*uit[t].values()) for t in term[van]))
             if not alle & term[naar]:
-                B.append(("BEG-05", form or f"{van} → {naar}", f"definitie van {', '.join(sorted(term[van]))} "
+                B.append(("KERN-C-BG05", form or f"{van} → {naar}", f"definitie van {', '.join(sorted(term[van]))} "
                           f"verwijst niet naar {', '.join(sorted(term[naar]))}", bron_lijst))
         gekoppeld = set().union(*term.values()) if term else set()
         los = [b["term"] for b in begrippen if b["term"] not in gekoppeld]
         if los:
-            B.append(("BEG-06", f"{len(los)} begrippen", ", ".join(los), bron_lijst))
+            B.append(("KERN-C-BG06", f"{len(los)} begrippen", ", ".join(los), bron_lijst))
     elif begrippenlijst:
         pass                                            # al gemeld: geen feitenmodel
     else:
-        niet.append("BEG-01 t/m BEG-06: geen begrippenlijst opgegeven (-b)")
-        overgeslagen |= {r for r, _, _ in REGELS if r.startswith("BEG")}
+        niet.append("BG01 t/m BG06: geen begrippenlijst opgegeven (-b)")
+        overgeslagen |= {r for r, _, _ in REGELS if r.startswith("KERN-C-BG")}
+    onbekend = {b[0] for b in B} - {r[0] for r in REGELS}
+    if onbekend:
+        sys.exit(f"Regel-id's niet in references/regels.csv: {', '.join(sorted(onbekend))}")
     return B, niet, overgeslagen, [naam(p) for p in cm_paden], [naam(p) for p in fm_paden]
 
 

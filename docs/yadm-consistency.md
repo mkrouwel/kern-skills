@@ -10,7 +10,7 @@ This skill builds on three other skills and imports their scripts. Install them 
 
 | Skill | Used for |
 |---|---|
-| [`yadm-tpt`](yadm-tpt.md) | reading the CM: transaction kinds, type O/I/D, information links |
+| [`yadm-tpt`](yadm-tpt.md) | reading the CM: transaction kinds, type O/I/D, initiators, information links |
 | [`yadm-facttypes`](yadm-facttypes.md) | reading the FM: entity types, property, attribute and product kinds, derivations, merging diagrams |
 | [`definitiekwaliteit`](definitiekwaliteit.md) | reading the glossary; genus and enumerations in definitions (only with `-b`) |
 
@@ -28,29 +28,23 @@ The model then groups findings by cause and judges the glossary findings on cont
 
 ## Rules
 
-| Rule | Severity | Description |
+The rules are in [`references/regels.csv`](../skills/yadm-consistency/references/regels.csv) (in Dutch), with columns `Id`, `Categorie`, `Ernst` (severity: fout, waarschuwing, signaal), `Regel` and `Controle` (how the script checks it). The script reads its rule descriptions from this file and stops if it uses an ID that is not in it.
+
+Rule IDs have the form `KERN-C-<category><number>`; `C` stands for consistency. [`definitiekwaliteit`](definitiekwaliteit.md) uses `KERN-D-`, so IDs are unique across the skills. Categories:
+
+| Code | Category | Covers |
 |---|---|---|
-| CON-01 | fout | Every original transaction kind (O) in the CM has a product kind in the FM |
-| CON-02 | fout | Every product kind in the FM belongs to an original transaction kind in the CM |
-| CON-03 | fout | One transaction kind has one product kind |
-| CON-04 | fout | An information link to TKnn in the CM requires product kind PKnn in the FM |
-| CON-05 | fout | A product kind is linked to the entity type that is the variable in its formulation (for an aggregate: its components) |
-| CON-06 | waarschuwing | A product kind has one variable (for an aggregate: its components) and ends in "is/zijn + past participle" |
-| CON-07 | fout | Both ends of a property type are variables in its formulation |
-| CON-08 | fout | The target end (in the direction of the line) is 0..1 or 1..1 |
-| CON-09 | waarschuwing | The source end has a cardinality |
-| CON-10 | fout | Every attribute type has a value type |
-| CON-11 | fout | An attribute type occurs once per entity type, with the same value type in every diagram |
-| CON-12 | fout | An entity type in focus (internal, white; `data.focus` = `in`) has at least one product kind. A product kind may be linked to an entity type out of focus |
-| CON-13 | waarschuwing | No isolated entity types |
-| CON-14 | fout | An element has the same name in every diagram |
-| CON-15 | waarschuwing | No edges to missing nodes and no entity types with header "A" (tool problems) |
-| BEG-01 | fout | Every entity type has a term in the glossary |
-| BEG-02 | fout | Specialisation: the genus of the definition is the parent in the FM |
-| BEG-03 | fout | Generalisation: the definition enumerates the members, and an enumerating definition is a generalisation |
-| BEG-04 | fout | Aggregation: the definition refers to all components |
-| BEG-05 | signaal | The definition of the owner of a property type refers to the other entity type |
-| BEG-06 | signaal | Terms without an entity type |
+| CM | coöperatiemodel | the CM itself, for example every transaction kind that is not self-activating has an initiator |
+| TK | transactiesoort en productsoort | CM against FM: every original transaction kind has a product kind and vice versa; information links to a transaction bank |
+| PK | productsoort | product kinds: linked entity type and formulation |
+| ES | eigenschapsoort | property types: variables in the formulation, cardinalities |
+| AS | attribuutsoort | attribute types: value types, duplicates |
+| ET | entiteittype | entity types: an entity type in focus has a product kind; no isolated entity types |
+| NM | naamgeving over diagrammen | entity types, transaction kinds, actor roles, MTKs and product kinds have the same label in every diagram |
+| TL | export (tool) | edges to missing nodes and headers "A"; problems in YADM, not in the model |
+| BG | begrippenlijst | the fact model against the glossary (only with `-b`) |
+
+A new rule gets the next number in its category; an existing ID never changes meaning.
 
 ## Script
 
