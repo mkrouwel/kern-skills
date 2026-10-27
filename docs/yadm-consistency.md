@@ -18,6 +18,20 @@ This skill builds on three other skills and imports their scripts. Install them 
 
 - **YADM exports:** all JSON exports that together form the model (the CM and all FM diagrams), in one run. The script detects which export is a CM and which is an FM.
 - **Glossary (optional):** a glossary in the format of [`definitiekwaliteit`](definitiekwaliteit.md).
+- **BCT (optional):** a bank contact table (*bankcontactentabel*) that lists, per bank of a multiple transaction kind (MTK) or transaction kind (TK), which facts it holds. CSV with `;` or `,`, one fact type per row, column names not case-sensitive:
+
+  | Column | Required | Content |
+  |---|---|---|
+  | `feittype` | yes | as in the fact extraction of [`yadm-facttypes`](yadm-facttypes.md): `NAME*`, `attribute van [entity type]`, the formulation of a property type, `formulation (PKnn)` |
+  | `bank ID` | no | number of the MTK or TK; empty if the fact belongs to no bank |
+  | `bank` | no | name of the bank (for an MTK equal to its name in the CM) |
+  | `soort`, `waardetype`, `afleiding` | no | as in the fact extraction; compared when filled |
+  | `bron FM` | no | the diagrams (fileName) the fact appears in, comma-separated |
+  | `Opm tav BCT` or `opmerking` | no | required for a row without a bank: why (e.g. "gedekt door <fact type>", "niet relevant") |
+
+  Abbreviations are allowed: an entity type row `POLITIEKE GROEPERING (PG)` makes `[PG]` elsewhere in the BCT equal to `[politieke groepering]`.
+
+  **Tip:** create the BCT from the fact extraction: `python -I skills/yadm-facttypes/scripts/feittypen.py <FM exports> -b bct.csv` writes a template with every fact type, its type, value type, derivation and source diagrams. Only `bank ID` and `bank` remain to be filled, so the BCT matches the fact model from the start.
 
 ## What it produces
 
@@ -43,13 +57,14 @@ Rule IDs have the form `KERN-C-<category><number>`; `C` stands for consistency. 
 | NM | naamgeving over diagrammen | entity types, transaction kinds, actor roles, MTKs and product kinds have the same label in every diagram |
 | TL | export (tool) | edges to missing nodes and headers "A"; problems in YADM, not in the model |
 | BG | begrippenlijst | the fact model against the glossary (only with `-b`) |
+| BC | bankcontactentabel | the fact model against the BCT (only with `-t`): every FM fact in the BCT and vice versa; type, value type and derivation; the `bron FM` column; banks that exist in the CM; product kinds in the bank of their own TK; internal facts in a TK bank, external ones in an MTK bank; duplicates; rows without a bank explained |
 
 A new rule gets the next number in its category; an existing ID never changes meaning.
 
 ## Script
 
 ```
-python -I skills/yadm-consistency/scripts/consistentie.py "<CM>.json" "<FM>.json" [more exports …] [-b glossary.csv] [-o report.md]
+python -I skills/yadm-consistency/scripts/consistentie.py "<CM>.json" "<FM>.json" [more exports …] [-b glossary.csv] [-t bct.csv] [-o report.md]
 ```
 
 No dependencies beyond the Python standard library and the three skills above.

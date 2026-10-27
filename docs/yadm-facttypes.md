@@ -39,8 +39,10 @@ One or more JSON exports from YADM, in React Flow format (`nodes` and `edges`). 
 
 ## Script
 
+With `-b bct.csv` the script also writes the fact types as a template for a bank contact table (BCT) in the format that [`yadm-consistency`](yadm-consistency.md) checks: one fact type per row, with type, value type, derivation and source diagrams already filled in. Only `bank ID` and `bank` remain to be filled. Starting the BCT this way avoids spelling differences with the fact model. Spellings that differ only in capitals (a known YADM export issue) are merged in the template.
+
 ```
-python -I skills/yadm-facttypes/scripts/feittypen.py "<export>.json" [more exports …] [-o table.md]
+python -I skills/yadm-facttypes/scripts/feittypen.py "<export>.json" [more exports …] [-o table.md] [-b bct.csv]
 ```
 
 No dependencies beyond the Python standard library.

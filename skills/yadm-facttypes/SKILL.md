@@ -68,6 +68,7 @@ Gestippelde edges tellen alleen als beide eindpunten in hetzelfde diagram staan;
 ## Uitgangspunten
 
 - Toon de tabel in het gesprek. Schrijf hem alleen naar een bestand als de gebruiker daarom vraagt (`-o <bestand>.md`).
+- Wil de gebruiker een bankcontactentabel (BCT) opzetten of bijwerken, schrijf dan met `-b <bestand>.csv` een sjabloon in het formaat van de skill `yadm-consistency`. Soort, waardetype, afleiding en bron FM zijn dan ingevuld; alleen `bank ID` en `bank` moeten nog worden ingevuld. Zo komt de schrijfwijze overeen met het FM.
 - Neem eigenschapsoorten waarvan een eindpunt ontbreekt nooit op in de tabel; meld ze alleen.
 - Wijkt een export af (andere nodetypen, andere markeringen), pas dan het script aan in plaats van de tabel met de hand te corrigeren.
 - Verander niets aan de export.

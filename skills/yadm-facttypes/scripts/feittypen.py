@@ -169,7 +169,7 @@ def lees(paden):
 
     # ---------- edges ----------
     PT, PT_LIJNEN, AFL = {}, [], defaultdict(set)
-    zwevend, gestippeld, kard_fout = [], [], []
+    zwevend, gestippeld, kard_fout, elders = [], [], [], []
     for kort, e in E:
         D = e.get("data") or {}
         s, t = e["source"], e["target"]
@@ -177,6 +177,11 @@ def lees(paden):
         lab = [schoon((cd.get(k) or {}).get("label")) for k in ("startLabel", "middleLabel", "endLabel")]
         if s not in U or t not in U:
             zwevend.append((kort, "eigenschapsoort" if D.get("markerMid") else "overig", lab[1], e["id"]))
+            continue
+        if not all(any(k == kort for k, _ in VOORKOMENS[x]) for x in (s, t)):
+            # eindpunt bestaat wel, maar niet in dit diagram: onzichtbaar restant in YADM
+            elders.append((kort, "eigenschapsoort" if D.get("markerMid") else
+                           "gestippeld" if D.get("lineType") == "dashed" else "overig", lab[1], e["id"]))
             continue
         if U[s]["type"] == "production_event" or U[t]["type"] == "production_event":
             p, o = (s, t) if s in pk_van else (t, s)
@@ -288,7 +293,7 @@ def lees(paden):
     return {"ET": ET, "PT": PT, "PT_LIJNEN": PT_LIJNEN, "PK": PK, "AFL": AFL, "volgorde": volgorde,
             "afgeleid": afgeleid, "ster": ster, "afleiding": afleiding, "conflicten": conflicten,
             "kop_a": kop_a, "zwevend": zwevend, "kard_fout": kard_fout, "onbepaald": onbepaald,
-            "buiten": buiten, "opm": opm}
+            "buiten": buiten, "elders": elders, "opm": opm}
 
 
 def verwerk(paden):
@@ -324,6 +329,9 @@ def verwerk(paden):
     if onbepaald:
         opm.append("Gestippelde lijn zonder herkenbare afleiding: "
                    + "; ".join(f"{s} → {t} ({k})" for k, s, t in onbepaald) + ".")
+    if M["elders"]:
+        opm.append(f"{len(M['elders'])} lijn(en) met een eindpunt dat niet in het eigen diagram staat (waarschijnlijk onzichtbaar in YADM); niet opgenomen: "
+                   + "; ".join(sorted({f"{f or soort} ({k})" for k, soort, f, _ in M["elders"]})) + ".")
     if buiten:
         opm.append(f"{len(buiten)} gestippelde lijn(en) naar een element buiten het eigen diagram genegeerd: "
                    + "; ".join(buiten) + ".")
@@ -338,6 +346,8 @@ def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("exports", nargs="+", help="YADM-export(s) in JSON")
     p.add_argument("-o", "--output", help="schrijf het resultaat ook naar dit Markdown-bestand")
+    p.add_argument("-b", "--bct", help="schrijf de feittypen ook als sjabloon voor een bankcontactentabel (CSV) "
+                                       "in het formaat van de skill yadm-consistency; alleen bank ID en bank zijn nog in te vullen")
     args = p.parse_args()
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     tabel, opm = verwerk(args.exports)
@@ -346,6 +356,18 @@ def main():
     if args.output:
         with open(args.output, "w", encoding="utf-8") as f:
             f.write(tekst + "\n")
+    if args.bct and tabel:
+        import csv
+        with open(args.bct, "w", newline="", encoding="utf-8-sig") as f:
+            w = csv.writer(f, delimiter=";")
+            w.writerow(["bank ID", "bank", "feittype", "soort", "waardetype", "afleiding", "bron FM", "Opm tav BCT"])
+            rijen = {}                                 # schrijfwijzen die alleen in hoofdletters verschillen samenvoegen
+            for regel in tabel[2:]:                    # de tabelrijen: | Feittype | Soort | Waardetype | Afleiding | Bron |
+                f_, s_, w_, a_, b_ = [c.strip() for c in regel.strip("|").split(" | ")]
+                r = rijen.setdefault(f_.lower(), [f_, s_, w_, a_, set()])
+                r[4] |= {x.strip() for x in b_.split(",") if x.strip()}
+            for f_, s_, w_, a_, b_ in rijen.values():
+                w.writerow(["", "", f_, s_, w_, a_, ", ".join(sorted(b_)), ""])
 
 
 if __name__ == "__main__":

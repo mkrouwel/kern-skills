@@ -1,7 +1,7 @@
 """Consistentie tussen het CSD (CM) en het feitenmodel (FM) in YADM-exports controleren,
-en optioneel het feitenmodel tegen een begrippenlijst.
+en optioneel het feitenmodel tegen een begrippenlijst en tegen een bankcontactentabel (BCT).
 
-  python consistentie.py "<export>.json" [meer exports ...] [-b begrippen.csv] [-o uitvoer.md]
+  python consistentie.py "<export>.json" [meer exports ...] [-b begrippen.csv] [-t bct.csv] [-o uitvoer.md]
 
 Bouwt voort op de zusterskills (in dezelfde skills-map geïnstalleerd):
 - yadm-tpt          (scripts/tpt.py)         leest het CSD: transactiesoorten, type, raadplegen
@@ -16,6 +16,7 @@ tabel met bevindingen (Regel | Element | Bevinding | Bron).
 
 import argparse
 import csv
+import io
 import json
 import re
 import sys
@@ -41,7 +42,7 @@ feittypen = importeer("yadm-facttypes", "feittypen")
 with open(Path(__file__).resolve().parents[1] / "references" / "regels.csv", newline="", encoding="utf-8-sig") as f:
     REGELS = [(r["Id"], r["Ernst"], r["Regel"]) for r in csv.DictReader(f)]
 
-norm = lambda s: re.sub(r"\s+", " ", re.sub(r"[-_]", " ", (s or "").lower())).strip()
+norm = lambda s: re.sub(r"\s+", " ", re.sub(r"[-_{}]", " ", (s or "").lower())).strip()
 var = lambda form: [norm(re.sub(r"^set van ", "", v.strip(), flags=re.I)) for v in re.findall(r"\[([^\]]+)\]", form or "")]
 nr = lambda s: str(int(s)) if str(s).isdigit() else str(s)
 
@@ -51,7 +52,138 @@ def lees_json(pad):
         return json.load(f)
 
 
-def controleer(paden, begrippenlijst=None):
+# ---------- BCT (bankcontactentabel) ----------
+# kolomnamen (kleine letters) met toegestane varianten; zie docs/yadm-consistency.md
+BCT_KOLOM = {"bank": ["bank id", "bank-id", "bankid"], "banknaam": ["bank"], "feittype": ["feittype"],
+             "soort": ["soort"], "waardetype": ["waardetype"], "afleiding": ["afleiding"], "bron": ["bron fm", "bron"]}
+
+
+def lees_bct(pad):
+    with open(pad, newline="", encoding="utf-8-sig") as f:
+        tekst = f.read()
+    kop = tekst.splitlines()[0] if tekst else ""
+    rijen = list(csv.DictReader(io.StringIO(tekst), delimiter=";" if kop.count(";") >= kop.count(",") else ","))
+    kol = {k.strip().lower(): k for k in (rijen[0].keys() if rijen else []) if k}
+    if "feittype" not in kol:
+        sys.exit(f"{pad} moet ten minste de kolom 'feittype' hebben")
+    def pak(r, naam):
+        k = next((kol[k] for k in BCT_KOLOM[naam] if k in kol), None)
+        return (r.get(k) or "").strip() if k else ""
+    opm = next((kol[k] for k in kol if k.startswith("opm") and "bct" in k), kol.get("opmerking"))
+    return [{**{n: pak(r, n) for n in BCT_KOLOM}, "opmerking": (r.get(opm) or "").strip() if opm else "", "regel": i + 2}
+            for i, r in enumerate(rijen) if pak(r, "feittype")]
+
+
+def bct_sleutel(f, afk):
+    """Vergelijkingssleutel voor een feittype: zonder hoofdletters, '*', '(PKnn)', accolades en lidwoord vooraan;
+    afkortingen tussen [] uitgeschreven."""
+    s = f.lower().replace("*", "")
+    s = re.sub(r"\s*\(pk\d+\)\s*$", "", s)
+    s = re.sub(r"\[([^\]]*)\]", lambda m: "[" + afk.get(m.group(1).strip(), m.group(1).strip()) + "]", s)
+    s = re.sub(r"\s*\([a-z]{1,5}\)\s*$", "", s)        # afkortingsdefinitie achter een entiteittype: 'X (PG)'
+    s = re.sub(r"[-_{}]", " ", s)
+    s = re.sub(r"\s+", " ", s).strip()
+    return re.sub(r"^(de|het) ", "", s)
+
+
+def fm_feiten(F, afk):
+    """Alle feittypen uit het FM: sleutel -> feittype, soort, waardetype, afleiding, bron, eigenaar, pk."""
+    uit = {}
+    def zet(f, soort, w, afl, bron, eig, pk=None):
+        k = bct_sleutel(f, afk)
+        if k in uit:                                    # zelfde feit met andere schrijfwijze per export
+            uit[k]["bron"] |= set(bron)
+        else:
+            uit[k] = {"feittype": f, "soort": soort, "waardetype": w, "afleiding": afl, "bron": set(bron), "eigenaar": eig, "pk": pk}
+    for nm, e in F["ET"].items():
+        zet(F["ster"](nm), "entiteittype", "", F["afleiding"](nm), e["bron"], nm)
+        for (a, w), br in e["attrs"].items():
+            zet(f"{a} van [{nm.lower()}]", "attribuutsoort", w, "", br, nm)
+    for form, g in F["PT"].items():
+        zet(form, "eigenschapsoort", "", "", g["bron"], g["eigenaar"])
+    for (tk, form), v in F["PK"].items():
+        zet(f"{form} (PK{tk})", "productsoort", "", "", v["bron"], v.get("bij"), nr(tk))
+    return uit
+
+
+def bct_controle(pad, F, TK, MTKS):
+    """KERN-C-BC01 t/m BC08. TK: nr -> type; MTKS: nr -> naam (leeg zonder CM)."""
+    B = []
+    rijen = lees_bct(pad)
+    bron_bct = Path(pad).name
+    plek = lambda r: f"{bron_bct} r{r['regel']}"
+    afk = {}
+    for r in rijen:                                     # 'POLITIEKE GROEPERING (PG)' definieert [pg]
+        m = re.search(r"\(([A-Za-z]{1,5})\)\s*$", r["feittype"])
+        if m and r["soort"].lower() in ("", "entiteittype"):
+            afk[m.group(1).lower()] = bct_sleutel(r["feittype"], {})
+    fm = fm_feiten(F, afk)
+    zachte = lambda s: re.sub(r"\s+", "", (s or "").lower().replace("*", ""))
+    gezien = defaultdict(list)
+    for r in rijen:
+        gezien[bct_sleutel(r["feittype"], afk)].append(r)
+    for k, rs in gezien.items():
+        if len(rs) > 1:
+            B.append(("KERN-C-BC07", rs[0]["feittype"], "staat " + str(len(rs)) + " keer in de BCT (regels "
+                      + ", ".join(str(r["regel"]) for r in rs) + ")", bron_bct))
+    for k, v in sorted(fm.items(), key=lambda x: x[1]["feittype"].lower()):
+        if k not in gezien:
+            B.append(("KERN-C-BC01", v["feittype"], f"{v['soort']} staat niet in de BCT", ", ".join(sorted(v["bron"]))))
+    for k, rs in gezien.items():
+        r = rs[0]
+        v = fm.get(k)
+        if not v:
+            dicht = __import__("difflib").get_close_matches(k, list(fm), n=1, cutoff=0.75)
+            B.append(("KERN-C-BC02", r["feittype"], "staat niet in het FM"
+                      + (f"; lijkt op '{fm[dicht[0]]['feittype']}'" if dicht else ""), plek(r)))
+            continue
+        if r["soort"] and r["soort"].lower() != v["soort"]:
+            B.append(("KERN-C-BC03", r["feittype"], f"soort '{r['soort']}', in het FM {v['soort']}", plek(r)))
+        if r["waardetype"] and v["waardetype"] and zachte(r["waardetype"]) != zachte(v["waardetype"]):
+            B.append(("KERN-C-BC03", r["feittype"], f"waardetype '{r['waardetype']}', in het FM '{v['waardetype']}'", plek(r)))
+        if (r["afleiding"] or v["afleiding"]) and zachte(r["afleiding"]) != zachte(v["afleiding"]):
+            B.append(("KERN-C-BC03", r["feittype"], f"afleiding '{r['afleiding'] or 'leeg'}', in het FM '{v['afleiding'] or 'geen'}'", plek(r)))
+        bron = {x.strip() for x in r["bron"].split(",") if x.strip()}
+        if bron != v["bron"]:
+            delen = [f"te veel: {', '.join(sorted(bron - v['bron']))}" if bron - v["bron"] else "",
+                     f"ontbreekt: {', '.join(sorted(v['bron'] - bron))}" if v["bron"] - bron else ""]
+            B.append(("KERN-C-BC04", r["feittype"], ("bron FM is leeg; in het FM: " + ", ".join(sorted(v["bron"]))) if not bron
+                      else "bron FM wijkt af (" + "; ".join(d for d in delen if d) + ")", plek(r)))
+        bank = nr(r["bank"]) if r["bank"] else ""
+        if bank and (TK or MTKS):
+            if v["soort"] == "productsoort" and v["pk"] and bank != v["pk"]:
+                B.append(("KERN-C-BC06", r["feittype"], f"productsoort PK{v['pk']} staat in bank {r['bank']}, verwacht {v['pk']}", plek(r)))
+            eig = F["ET"].get(v["eigenaar"]) if v["eigenaar"] else None
+            if eig and v["soort"] != "productsoort":
+                intern = "in" in eig["focus"]
+                if intern and bank not in TK:
+                    B.append(("KERN-C-BC06", r["feittype"], f"{v['eigenaar']} is in focus (intern), maar bank {r['bank']} is geen transactiesoort", plek(r)))
+                elif not intern and bank in TK and bank not in MTKS:
+                    B.append(("KERN-C-BC06", r["feittype"], f"{v['eigenaar']} is buiten focus (extern), maar bank {r['bank']} is een transactiesoort, geen MTK", plek(r)))
+    banken = {}
+    for r in rijen:
+        if r["bank"]:
+            banken.setdefault(nr(r["bank"]), r)
+    if TK or MTKS:
+        for b, r in sorted(banken.items(), key=lambda x: (not x[0].isdigit(), int(x[0]) if x[0].isdigit() else 0)):
+            if b not in TK and b not in MTKS:
+                B.append(("KERN-C-BC05", f"bank {r['bank']}", f"'{r['banknaam']}' is geen MTK of transactiesoort in het CM", plek(r)))
+            elif b in MTKS and b not in TK and r["banknaam"] and zachte(r["banknaam"]) != zachte(MTKS[b]):
+                B.append(("KERN-C-BC05", f"bank {r['bank']}", f"naam '{r['banknaam']}', in het CM MTK {b} '{MTKS[b]}'", plek(r)))
+    alle = set(gezien) | set(fm)
+    for r in rijen:
+        if r["bank"]:
+            continue
+        if not r["opmerking"]:
+            B.append(("KERN-C-BC08", r["feittype"], "geen bank en geen toelichting", plek(r)))
+            continue
+        m = re.match(r"gedekt door\s+(.+)", r["opmerking"], re.I)
+        if m and bct_sleutel(m.group(1), afk) not in alle:
+            B.append(("KERN-C-BC08", r["feittype"], f"'gedekt door {m.group(1)}': dat feit staat niet in de BCT of het FM", plek(r)))
+    return B
+
+
+def controleer(paden, begrippenlijst=None, bct=None):
     B = []                                              # (regel, element, bevinding, bron)
     data = {p: lees_json(p) for p in paden}
     soort = lambda d: {n["type"] for n in d.get("nodes", [])}
@@ -61,11 +193,13 @@ def controleer(paden, begrippenlijst=None):
     niet, overgeslagen = [], set()             # toelichting; regel-id's die niet zijn gecontroleerd
 
     # ---------- CM ----------
-    TK, TK_BRON, RAADPLEEG = {}, defaultdict(set), []   # nr -> type; nr -> exports; (label, rol, export)
+    TK, TK_BRON, RAADPLEEG, MTKS = {}, defaultdict(set), [], {}   # nr -> type; nr -> exports; (label, rol, export); nr -> naam
     for p in cm_paden:
         M, _ = tpt.lees(p)
         if not M:
             continue
+        for m in M["mtk"].values():
+            MTKS.setdefault(nr(m["nr"]), m["naam"])
         for i, t in M["tk"].items():
             TK.setdefault(nr(t["nr"]), t["type"])
             TK_BRON[nr(t["nr"])].add(M["bestand"])
@@ -321,7 +455,17 @@ def controleer(paden, begrippenlijst=None):
     else:
         niet.append("BG01 t/m BG06: geen begrippenlijst opgegeven (-b)")
         overgeslagen |= {r for r, _, _ in REGELS if r.startswith("KERN-C-BG")}
-    onbekend = {b[0] for b in B} - {r[0] for r in REGELS}
+
+    # ---------- BCT ----------
+    if bct and F:
+        B += bct_controle(bct, F, TK if cm_paden else {}, MTKS)
+        if not cm_paden:
+            niet.append("BC05 en BC06: geen CM in de exports")
+            overgeslagen |= {"KERN-C-BC05", "KERN-C-BC06"}
+    elif not bct:
+        niet.append("BC01 t/m BC08: geen BCT opgegeven (-t)")
+        overgeslagen |= {r for r, _, _ in REGELS if r.startswith("KERN-C-BC")}
+    onbekend ={b[0] for b in B} - {r[0] for r in REGELS}
     if onbekend:
         sys.exit(f"Regel-id's niet in references/regels.csv: {', '.join(sorted(onbekend))}")
     return B, niet, overgeslagen, [naam(p) for p in cm_paden], [naam(p) for p in fm_paden]
@@ -347,10 +491,11 @@ def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("exports", nargs="+", help="YADM-export(s) in JSON: CM en FM")
     p.add_argument("-b", "--begrippen", help="begrippenlijst (CSV, formaat van de skill definitiekwaliteit)")
+    p.add_argument("-t", "--bct", help="bankcontactentabel (CSV, één feittype per regel; zie docs/yadm-consistency.md)")
     p.add_argument("-o", "--output", help="schrijf het resultaat ook naar dit Markdown-bestand")
     args = p.parse_args()
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-    tekst = "\n".join(rapport(*controleer(args.exports, args.begrippen)))
+    tekst = "\n".join(rapport(*controleer(args.exports, args.begrippen, args.bct)))
     print(tekst)
     if args.output:
         with open(args.output, "w", encoding="utf-8") as f:
