@@ -106,8 +106,9 @@ def lees(paden):
             return ", ".join(eigen_naam(k) for k in kinderen[i])
         if n["type"] in ("entity_type", "attribute"):
             nm = et_info(n)[0]
-            if nm == "A" and kinderen[i]:              # plaatshouder binnen een set
-                return ", ".join(eigen_naam(k) for k in kinderen[i])
+            et_kind = [k for k in kinderen[i] if k["type"] in ("entity_type", "attribute", "set")]
+            if et_kind:                                # plaatshouder binnen een set (YADM-tekst 'A' of 'B')
+                return ", ".join(eigen_naam(k) for k in et_kind)
             return nm
         if n["type"] == "production_event":
             return "".join(regels(inhoud(n).get("body")))
@@ -127,7 +128,8 @@ def lees(paden):
 
     def is_plaatshouder(i):
         n = U[i]
-        return n["type"] == "entity_type" and et_info(n)[0] == "A" and kinderen[i]
+        return n["type"] in ("entity_type", "attribute") and any(
+            k["type"] in ("entity_type", "attribute", "set") for k in kinderen[i])
 
     # ---------- entiteittypen en attribuutsoorten ----------
     ET, kop_a = {}, []

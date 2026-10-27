@@ -29,6 +29,7 @@ zelf ('dag') wordt herkend als hij als begrip in de lijst staat.
 
 import argparse
 import csv
+import io
 import re
 import sys
 from collections import defaultdict
@@ -40,11 +41,13 @@ MAX_KRINGEN = 500
 def lees_csv(pad):
     with open(pad, newline="", encoding="utf-8-sig") as f:
         tekst = f.read()
+    # alleen het scheidingsteken herkennen: de Sniffer zet op een kopregel zonder aanhalingstekens
+    # doublequote uit, waardoor "" in een cel de rest van de rij breekt
     try:
-        dialect = csv.Sniffer().sniff(tekst.splitlines()[0], delimiters=";,\t")
+        scheiding = csv.Sniffer().sniff(tekst.splitlines()[0], delimiters=";,\t").delimiter
     except csv.Error:
-        dialect = csv.excel
-    rijen = list(csv.DictReader(tekst.splitlines(), dialect=dialect))
+        scheiding = ","
+    rijen = list(csv.DictReader(io.StringIO(tekst), delimiter=scheiding))
     # extra velden (rij met meer velden dan kolommen) komen onder sleutel None als lijst; negeren
     return [{k.strip().lower(): (v or "").strip() for k, v in r.items() if k is not None} for r in rijen]
 
