@@ -119,6 +119,10 @@ def bct_controle(pad, F, TK, MTKS):
             afk[m.group(1).lower()] = bct_sleutel(r["feittype"], {})
     fm = fm_feiten(F, afk)
     zachte = lambda s: re.sub(r"\s+", "", (s or "").lower().replace("*", ""))
+    # afleiding: de volgorde van de componenten (aggregatie A × B, generalisatie van A, B) telt niet
+    def afl(s):
+        m = re.match(r"\s*(\w+)\s+van\s+(.*)", s or "")
+        return (m.group(1).lower(), tuple(sorted(zachte(x) for x in re.split(r"[×,]", m.group(2))))) if m else zachte(s)
     gezien = defaultdict(list)
     for r in rijen:
         gezien[bct_sleutel(r["feittype"], afk)].append(r)
@@ -141,7 +145,7 @@ def bct_controle(pad, F, TK, MTKS):
             B.append(("KERN-C-BC03", r["feittype"], f"soort '{r['soort']}', in het FM {v['soort']}", plek(r)))
         if r["waardetype"] and v["waardetype"] and zachte(r["waardetype"]) != zachte(v["waardetype"]):
             B.append(("KERN-C-BC03", r["feittype"], f"waardetype '{r['waardetype']}', in het FM '{v['waardetype']}'", plek(r)))
-        if (r["afleiding"] or v["afleiding"]) and zachte(r["afleiding"]) != zachte(v["afleiding"]):
+        if (r["afleiding"] or v["afleiding"]) and afl(r["afleiding"]) != afl(v["afleiding"]):
             B.append(("KERN-C-BC03", r["feittype"], f"afleiding '{r['afleiding'] or 'leeg'}', in het FM '{v['afleiding'] or 'geen'}'", plek(r)))
         bron = {x.strip() for x in r["bron"].split(",") if x.strip()}
         if bron != v["bron"]:
