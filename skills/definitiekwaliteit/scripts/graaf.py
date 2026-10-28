@@ -35,6 +35,7 @@ import sys
 from collections import defaultdict
 
 KLINKERS = "aeiou"
+TAXONOMIE = ("genus", "zelf", "opsomming")  # randen die de hiërarchie vormen (voor --alleen-genus)
 MAX_KRINGEN = 500
 
 
@@ -480,6 +481,112 @@ def schrijf_drawio(pad, niveau, lagen, keten, uniek, in_kring, ontbrekend, kring
         f.write(xml)
 
 
+def zoek_browser():
+    """Edge of Chrome/Chromium voor het omzetten van SVG naar PNG; None als er geen is."""
+    import os, shutil
+    for naam in ("msedge", "google-chrome", "chromium", "chromium-browser", "chrome"):
+        if shutil.which(naam):
+            return shutil.which(naam)
+    kandidaten = [os.path.join(os.environ.get(v, ""), *d) for v in ("ProgramFiles(x86)", "ProgramFiles", "LOCALAPPDATA")
+                  for d in (("Microsoft", "Edge", "Application", "msedge.exe"), ("Google", "Chrome", "Application", "chrome.exe"))]
+    kandidaten += ["/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+                   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"]
+    return next((k for k in kandidaten if os.path.isfile(k)), None)
+
+
+def schrijf_png(pad, niveau, lagen, uniek, in_kring, ontbrekend, kring_rand):
+    """Tekent de graaf als SVG (pad met .svg) en zet die met Edge/Chrome headless om naar PNG (pad).
+
+    Zelfde gelaagde layout als draw.io, maar zonder tussenpunten: pijlen zijn zachte bogen.
+    """
+    import os, subprocess, tempfile
+    from pathlib import Path
+    breedte = lambda t: max(110, 7 * len(t) + 24)
+    hoogte, dx, dy = 40, 30, 110
+    lagen = [[v for v in l if isinstance(v, str)] for l in lagen]
+    laagbreedte = [sum(breedte(v) for v in l) + dx * (len(l) - 1) for l in lagen]
+    max_b = max(laagbreedte, default=0)
+    pos = {}
+    for i, l in enumerate(lagen):
+        x = 110 + (max_b - laagbreedte[i]) / 2
+        for v in l:
+            pos[v] = (x, 30 + i * dy, breedte(v))
+            x += breedte(v) + dx
+    B, H = int(110 + max_b + 30), int(30 + len(lagen) * dy + 70)
+
+    def rand(v, px, py):
+        x, y, w = pos[v]
+        cx, cy = x + w / 2, y + hoogte / 2
+        ddx, ddy = px - cx, py - cy
+        if ddx == ddy == 0:
+            return cx, cy
+        s = min((w / 2) / abs(ddx) if ddx else 1e9, (hoogte / 2) / abs(ddy) if ddy else 1e9)
+        return cx + ddx * s, cy + ddy * s
+
+    kleur = {"genus": "#333333", "zelf": "#333333", "opsomming": "#3b6ea8", "gebruikt": "#999999"}
+    svg = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{B}" height="{H}" viewBox="0 0 {B} {H}" '
+           'font-family="Segoe UI, Arial, sans-serif"><rect width="100%" height="100%" fill="#ffffff"/><defs>']
+    for k in set(kleur.values()) | {"#c0392b"}:
+        svg.append(f'<marker id="p{k[1:]}" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" '
+                   f'orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="{k}"/></marker>')
+    svg.append("</defs>")
+    for i in range(len(lagen)):
+        svg.append(f'<text x="10" y="{30 + i * dy + 24}" font-size="11" fill="#999999">niveau {len(lagen) - 1 - i}</text>')
+    for (b, d), soort in sorted(uniek.items(), key=lambda x: x[1] != "gebruikt"):  # taxonomie bovenop
+        if b not in pos or d not in pos or b == d:
+            continue
+        k = "#c0392b" if kring_rand(b, d) else kleur.get(soort, "#999999")
+        mb = (pos[b][0] + pos[b][2] / 2, pos[b][1] + hoogte / 2)
+        md = (pos[d][0] + pos[d][2] / 2, pos[d][1] + hoogte / 2)
+        a, z = rand(b, *md), rand(d, *mb)
+        lengte = ((z[0] - a[0]) ** 2 + (z[1] - a[1]) ** 2) ** 0.5 or 1
+        buig = min(60, 0.12 * lengte)
+        cx = (a[0] + z[0]) / 2 - (z[1] - a[1]) / lengte * buig
+        cy = (a[1] + z[1]) / 2 + (z[0] - a[0]) / lengte * buig
+        streep = ' stroke-dasharray="5,4"' if soort == "gebruikt" else ""
+        svg.append(f'<path d="M{a[0]:.1f},{a[1]:.1f} Q{cx:.1f},{cy:.1f} {z[0]:.1f},{z[1]:.1f}" fill="none" stroke="{k}" '
+                   f'stroke-width="{1 if soort == "gebruikt" else 1.5}"{streep} marker-end="url(#p{k[1:]})" opacity="0.85"/>')
+    for v, (x, y, w) in pos.items():
+        if v in ontbrekend:
+            vul, lijn, extra = "#f4f4f4", "#888888", ' stroke-dasharray="6,4"'
+        elif v in in_kring:
+            vul, lijn, extra = "#fde2e2", "#c0392b", ""
+        elif niveau[v] == 0:
+            vul, lijn, extra = "#eef5ee", "#5b8a5b", ""
+        else:
+            vul, lijn, extra = "#ffffff", "#333333", ""
+        svg.append(f'<rect x="{x:.0f}" y="{y}" width="{w}" height="{hoogte}" rx="8" fill="{vul}" stroke="{lijn}" stroke-width="1.3"{extra}/>'
+                   f'<text x="{x + w / 2:.0f}" y="{y + hoogte / 2}" font-size="13" text-anchor="middle" dominant-baseline="central" '
+                   f'fill="#111111">{xml_esc(v)}</text>')
+    soorten = {s for s in uniek.values()}
+    legenda = [("#333333", "", "genus (bovenliggend begrip)")]
+    if "opsomming" in soorten:
+        legenda.append(("#3b6ea8", "", "opsomming (generalisatie naar lid)"))
+    if "gebruikt" in soorten:
+        legenda.append(("#999999", ' stroke-dasharray="5,4"', "gebruikt begrip"))
+    lx, ly = 10, 30 + len(lagen) * dy + 10
+    for i, (k, streep, tekst) in enumerate(legenda):
+        svg.append(f'<line x1="{lx + i * 260}" y1="{ly + 15}" x2="{lx + i * 260 + 40}" y2="{ly + 15}" stroke="{k}" stroke-width="1.5"{streep}/>'
+                   f'<text x="{lx + i * 260 + 48}" y="{ly + 19}" font-size="12" fill="#333333">{tekst}</text>')
+    svg.append(f'<text x="{lx}" y="{ly + 45}" font-size="12" fill="#333333">groen = elementair (niveau 0) · rood = kring · '
+               'gestreepte rand = ontbreekt in de lijst</text></svg>')
+    svg = "\n".join(svg)
+
+    pad = Path(pad)
+    pad.with_suffix(".svg").write_text(svg, encoding="utf-8")
+    browser = zoek_browser()
+    if not browser:
+        print(f"Geen Edge of Chrome gevonden: alleen {pad.with_suffix('.svg')} geschreven")
+        return
+    with tempfile.TemporaryDirectory() as tmp:
+        html_pad = Path(tmp) / "graaf.html"
+        html_pad.write_text(f'<!doctype html><html><body style="margin:0">{svg}</body></html>', encoding="utf-8")
+        subprocess.run([browser, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--force-device-scale-factor=2",
+                        f"--user-data-dir={tmp}", f"--window-size={B},{H}", f"--screenshot={pad.resolve()}", html_pad.as_uri()],
+                       capture_output=True, timeout=120)
+    print(f"PNG geschreven naar {pad}" if pad.exists() else f"PNG maken mislukt; SVG staat in {pad.with_suffix('.svg')}")
+
+
 def analyse(args):
     randen = lees_csv(args.randen)
     begrippen = {r["term"] for r in lees_begrippen(args.begrippen)} if args.begrippen else {r["bron"] for r in randen}
@@ -550,7 +657,7 @@ def analyse(args):
     kring_randen = []
     gesorteerd = sorted(uniek.items(), key=lambda x: (volg.index(x[0][0]), volg.index(x[0][1])))
     if args.alleen_genus:
-        gesorteerd = [x for x in gesorteerd if x[1] in ("genus", "zelf")]
+        gesorteerd = [x for x in gesorteerd if x[1] in TAXONOMIE]
     for i, ((b, d), soort) in enumerate(gesorteerd):
         pijl = "-->" if soort in ("genus", "zelf") else "-.->"
         m.append(f"  {ids[b]} {pijl} {ids[d]}")
@@ -587,6 +694,14 @@ def analyse(args):
     if args.drawio:
         schrijf_drawio(args.drawio, niveau, lagen, keten, uniek, set(in_kring), set(ontbrekend), kring_rand)
         print(f"draw.io-bestand geschreven naar {args.drawio}")
+    if args.png:
+        if args.alleen_genus:
+            # alleen de taxonomie, met een eigen gelaagde layout (zonder gebruikte begrippen)
+            tax = {e: s for e, s in uniek.items() if s in TAXONOMIE}
+            n_tax, l_tax, _, _ = gelaagde_ordening(knopen, list(tax), comp_van, ordening=genus_randen or None)
+            schrijf_png(args.png, n_tax, l_tax, tax, set(in_kring), set(ontbrekend), kring_rand)
+        else:
+            schrijf_png(args.png, niveau, lagen, uniek, set(in_kring), set(ontbrekend), kring_rand)
 
     tekst = "\n".join(uit) + "\n"
     if args.output:
@@ -611,7 +726,9 @@ def main():
     a.add_argument("--begrippen", help="begrippenlijst, om ontbrekende begrippen te herkennen")
     a.add_argument("-o", "--output")
     a.add_argument("--drawio", help="schrijf ook een .drawio-bestand met gelaagde layout")
-    a.add_argument("--alleen-genus", action="store_true", help="Mermaid-diagram met alleen genus-pijlen (taxonomie)")
+    a.add_argument("--png", help="schrijf ook een plaat als .png (en .svg ernaast); de PNG vraagt Edge of Chrome")
+    a.add_argument("--alleen-genus", action="store_true",
+                   help="Mermaid-diagram en PNG met alleen de taxonomie (genus en opsomming), zonder gebruikte begrippen")
     a.set_defaults(func=analyse)
     args = p.parse_args()
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # Windows-console (cp1252)
