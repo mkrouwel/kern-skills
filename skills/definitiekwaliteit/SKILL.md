@@ -64,10 +64,11 @@ Doe dit vóór het toetsen. De lijstregels (SAM-01 t/m SAM-08, KERN-D-SAM01 t/m 
    - een indeling in **niveaus**: niveau 0 = elementair (verwijst naar geen ander begrip in de lijst), hoger = meer samengesteld
    - een Mermaid-diagram van boven (samengesteld) naar beneden (elementair). Kringen zijn rood, ontbrekende begrippen gestreept en elementaire begrippen groen.
    - alleen op verzoek, met `--drawio graaf.drawio`: een `.drawio`-bestand met vaste, gelaagde posities. Het opent direct in draw.io of in de VS Code-extensie Draw.io Integration. Begrippen, genus-pijlen en verwijzingspijlen staan op aparte lagen die je aan en uit kunt zetten.
+   - alleen op verzoek, met `--png graaf.png`: een plaat als PNG, met een SVG ernaast. Zelfde gelaagde layout, met de pijlen als zachte bogen. Voor de PNG is Edge of Chrome nodig (headless). Zonder browser komt er alleen de SVG. Met `--alleen-genus` toont de plaat alleen de taxonomie (genus en opsomming), als losse bomen. Elke boom staat in een eigen kader, de grootste eerst. Het algemeenste begrip staat bovenaan, de specialisaties eronder. Een opsomming wordt getekend van lid naar generalisatie, zodat elke pijl naar het algemenere begrip wijst. Begrippen zonder genus of opsomming staan als lijst in de legenda.
 
    Geef `--begrippen` altijd mee; zonder die optie gelden begrippen zonder uitgaande randen als ontbrekend.
 
-   **Layout:** de volgorde binnen een niveau wordt geoptimaliseerd op de genus-pijlen. De taxonomie is meestal een boom en dus zonder kruisingen te tekenen. Verwijzingen naar veelgebruikte begrippen kruisen onvermijdelijk. Met `--alleen-genus` toont het Mermaid-diagram alleen de taxonomie.
+   **Layout:** de volgorde binnen een niveau wordt geoptimaliseerd op de genus-pijlen. De taxonomie is meestal een boom en dus zonder kruisingen te tekenen. Verwijzingen naar veelgebruikte begrippen kruisen onvermijdelijk. Met `--alleen-genus` tonen het Mermaid-diagram en de PNG alleen de taxonomie: genus- en opsommingspijlen.
 
    **Genus vs. gebruikt:** bij een extensionele definitie ('X of Y') is er geen genus; `opsomming`- en `gebruikt`-randen worden gestippeld getekend en staan in draw.io op de laag *Gebruikte begrippen*.
 
@@ -120,7 +121,7 @@ Maak het rapport `rapport-<naam>.md` uit de JSON, volgens de opbouw in `referenc
 
 Lever op: `toetsing-<naam>.json` en `rapport-<naam>.md`.
 - **Werkbestanden blijven in de scratchpad:** `begrippenlijst.csv` (als die nodig was), `randen.csv` en de uitvoer van `graaf.py analyse`.
-- **Een `.drawio`-bestand** lever je alleen als de gebruiker erom vraagt.
+- **Een `.drawio`-bestand of een PNG** lever je alleen als de gebruiker erom vraagt.
 
 ## Uitgangspunten
 

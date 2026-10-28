@@ -26,7 +26,7 @@ KERN-C-BG05,begrippenlijst,signaal,De definitie van de eigenaar van een eigensch
 KERN-C-BG06,begrippenlijst,signaal,Begrippen zonder entiteittype,"begrippen die aan geen entiteittype gekoppeld zijn, in drie groepen: in een ander feittype (term, kern of synoniem in de formulering), alleen in andere definities (graaf.py), of nergens gebruikt"
 KERN-C-BC01,bankcontactentabel,fout,Elk feittype in het FM staat in de BCT,"entiteit-, attribuut-, eigenschap- en productsoorten uit de feitextractie, op naam (zonder hoofdletters, '*', '(PKnn)', accolades; afkortingen uitgeschreven)"
 KERN-C-BC02,bankcontactentabel,fout,Elk feit in de BCT staat in het FM,op naam; bij geen treffer het meest gelijkende feittype
-KERN-C-BC03,bankcontactentabel,fout,"Soort, waardetype en afleiding in de BCT kloppen met het FM","kolommen soort, waardetype en afleiding, als ze gevuld zijn"
+KERN-C-BC03,bankcontactentabel,fout,"Soort, waardetype en afleiding in de BCT kloppen met het FM","kolommen soort, waardetype en afleiding, als ze gevuld zijn; bij een afleiding telt de volgorde van de componenten niet"
 KERN-C-BC04,bankcontactentabel,waarschuwing,De kolom 'bron FM' noemt precies de diagrammen waarin het feit staat,vergelijking met de exports (fileName) waarin het feit zichtbaar is
 KERN-C-BC05,bankcontactentabel,fout,"Elke bank is een MTK of transactiesoort in het CM, en de naam van een MTK-bank klopt",bank-ID tegen de nummers in het CM; banknaam tegen de MTK-naam
 KERN-C-BC06,bankcontactentabel,waarschuwing,"Een productsoort staat in de bank van zijn eigen transactiesoort; feiten van entiteittypen in focus staan in een transactiebank, van entiteittypen buiten focus in een MTK-bank",PK-nummer = bank-ID; data.focus van het entiteittype (of de eigenaar van het feit)

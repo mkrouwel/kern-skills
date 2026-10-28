@@ -28,7 +28,7 @@ A CSV file (UTF-8, separator `;` or `,`), a Markdown table, or a table pasted in
 ## What it produces
 - `toetsing-<name>.json`: per term and per rule a verdict, finding and proposal, plus a combined proposal per term (definition, reference, examples, counterexamples, synonyms) and proposals for missing terms
 - `rapport-<name>.md`: a report in table form, generated from the JSON, including the reference graph of the definitions before and after applying the proposals (cycles of any length, missing terms, levels from elementary at the bottom to composite at the top)
-- on request: a layered `.drawio` file of the graph
+- on request: a layered `.drawio` file of the graph, or a PNG image (full graph or taxonomy only)
 - the format is described in [`toetsresultaat.md`](../skills/definitiekwaliteit/references/toetsresultaat.md)
 
 ## Rules
@@ -56,7 +56,8 @@ python -I skills/definitiekwaliteit/scripts/graaf.py analyse randen.csv --begrip
    Review `randen.csv` by hand before the next step.
 2. **`analyse`** reports cycles of any length, self-references, terms that are used but not defined, and the levels (elementary at the bottom, composite at the top). The output is a Mermaid diagram.
    - Add `--drawio graaf.drawio` for a layered file that opens in draw.io.
-   - Add `--alleen-genus` to show only the taxonomy.
+   - Add `--png graaf.png` for an image of the graph, with an SVG next to it. The PNG needs Microsoft Edge or Google Chrome, which runs headless. Without a browser, you get only the SVG.
+   - Add `--alleen-genus` to show only the taxonomy (genus and enumeration arrows) in the Mermaid diagram and the PNG. The PNG then draws each taxonomy as a separate tree, with the most general term at the top. Enumerations are drawn from member to generalisation, so every arrow points to the more general term. Terms without a genus or enumeration are listed in the legend.
 
 No dependencies beyond the Python standard library.
 

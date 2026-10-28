@@ -494,25 +494,45 @@ def zoek_browser():
     return next((k for k in kandidaten if os.path.isfile(k)), None)
 
 
-def schrijf_png(pad, niveau, lagen, uniek, in_kring, ontbrekend, kring_rand):
+def schrijf_png(pad, niveau, blokken, uniek, in_kring, ontbrekend, kring_rand, los=()):
     """Tekent de graaf als SVG (pad met .svg) en zet die met Edge/Chrome headless om naar PNG (pad).
 
     Zelfde gelaagde layout als draw.io, maar zonder tussenpunten: pijlen zijn zachte bogen.
+    blokken: één lijst lagen (hele graaf, met niveaulabels), of een lijst van zulke lijsten: losse
+    bomen (taxonomie), die naast elkaar en in rijen worden gezet, elk in een kader.
+    los: begrippen die niet getekend zijn (bij --alleen-genus: zonder genus of opsomming); ze komen in de legenda.
     """
-    import os, subprocess, tempfile
+    import subprocess, tempfile
     from pathlib import Path
     breedte = lambda t: max(110, 7 * len(t) + 24)
-    hoogte, dx, dy = 40, 30, 110
-    lagen = [[v for v in l if isinstance(v, str)] for l in lagen]
-    laagbreedte = [sum(breedte(v) for v in l) + dx * (len(l) - 1) for l in lagen]
-    max_b = max(laagbreedte, default=0)
-    pos = {}
-    for i, l in enumerate(lagen):
-        x = 110 + (max_b - laagbreedte[i]) / 2
-        for v in l:
-            pos[v] = (x, 30 + i * dy, breedte(v))
-            x += breedte(v) + dx
-    B, H = int(110 + max_b + 30), int(30 + len(lagen) * dy + 70)
+    hoogte, dx, dy, tussen = 40, 30, 110, 50
+    bomen = not blokken or not isinstance(blokken[0][0], str) and isinstance(blokken[0][0], list)
+    if not bomen:
+        blokken = [blokken]
+    blokken = [[[v for v in l if isinstance(v, str)] for l in b] for b in blokken]
+    if bomen:
+        blokken = [b[::-1] for b in blokken]  # taxonomie: algemeen boven, specifiek onder
+    maten = []
+    for b in blokken:
+        lb = [sum(breedte(v) for v in l) + dx * (len(l) - 1) for l in b]
+        maten.append((max(lb, default=0), len(b) * dy - (dy - hoogte), lb))
+    links = 20 if bomen else 110
+    max_rij = max([2600] + [w for w, _, _ in maten])
+    pos, kaders, x0, y0, rij_h = {}, [], links, 30, 0
+    for b, (bw, bh, lb) in zip(blokken, maten):
+        if x0 > links and x0 + bw > links + max_rij:
+            x0, y0, rij_h = links, y0 + rij_h + tussen, 0
+        for i, l in enumerate(b):
+            x = x0 + (bw - lb[i]) / 2
+            for v in l:
+                pos[v] = (x, y0 + i * dy, breedte(v))
+                x += breedte(v) + dx
+        kaders.append((x0 - 12, y0 - 12, bw + 24, bh + 24))
+        x0 += bw + tussen
+        rij_h = max(rij_h, bh)
+    B = int(max(x + w for x, _, w in pos.values()) + 30)
+    H = int(y0 + rij_h + 80)
+    lagen = blokken[0]
 
     def rand(v, px, py):
         x, y, w = pos[v]
@@ -530,8 +550,12 @@ def schrijf_png(pad, niveau, lagen, uniek, in_kring, ontbrekend, kring_rand):
         svg.append(f'<marker id="p{k[1:]}" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" '
                    f'orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="{k}"/></marker>')
     svg.append("</defs>")
-    for i in range(len(lagen)):
-        svg.append(f'<text x="10" y="{30 + i * dy + 24}" font-size="11" fill="#999999">niveau {len(lagen) - 1 - i}</text>')
+    if bomen:
+        svg += [f'<rect x="{x:.0f}" y="{y:.0f}" width="{w:.0f}" height="{h:.0f}" rx="12" fill="#fafafa" stroke="#dddddd"/>'
+                for x, y, w, h in kaders]
+    else:
+        for i in range(len(lagen)):
+            svg.append(f'<text x="10" y="{30 + i * dy + 24}" font-size="11" fill="#999999">niveau {len(lagen) - 1 - i}</text>')
     for (b, d), soort in sorted(uniek.items(), key=lambda x: x[1] != "gebruikt"):  # taxonomie bovenop
         if b not in pos or d not in pos or b == d:
             continue
@@ -561,15 +585,33 @@ def schrijf_png(pad, niveau, lagen, uniek, in_kring, ontbrekend, kring_rand):
     soorten = {s for s in uniek.values()}
     legenda = [("#333333", "", "genus (bovenliggend begrip)")]
     if "opsomming" in soorten:
-        legenda.append(("#3b6ea8", "", "opsomming (generalisatie naar lid)"))
+        legenda.append(("#3b6ea8", "", "lid van een opsomming (lid naar generalisatie)" if bomen
+                        else "opsomming (generalisatie naar lid)"))
     if "gebruikt" in soorten:
         legenda.append(("#999999", ' stroke-dasharray="5,4"', "gebruikt begrip"))
-    lx, ly = 10, 30 + len(lagen) * dy + 10
+    lx, ly = 10, H - 70
     for i, (k, streep, tekst) in enumerate(legenda):
-        svg.append(f'<line x1="{lx + i * 260}" y1="{ly + 15}" x2="{lx + i * 260 + 40}" y2="{ly + 15}" stroke="{k}" stroke-width="1.5"{streep}/>'
-                   f'<text x="{lx + i * 260 + 48}" y="{ly + 19}" font-size="12" fill="#333333">{tekst}</text>')
-    svg.append(f'<text x="{lx}" y="{ly + 45}" font-size="12" fill="#333333">groen = elementair (niveau 0) · rood = kring · '
-               'gestreepte rand = ontbreekt in de lijst</text></svg>')
+        svg.append(f'<line x1="{lx + i * 320}" y1="{ly + 15}" x2="{lx + i * 320 + 40}" y2="{ly + 15}" stroke="{k}" stroke-width="1.5"{streep}/>'
+                   f'<text x="{lx + i * 320 + 48}" y="{ly + 19}" font-size="12" fill="#333333">{tekst}</text>')
+    groen = "groen = meest algemeen begrip (wortel van de boom)" if bomen else "groen = elementair (niveau 0)"
+    svg.append(f'<text x="{lx}" y="{ly + 45}" font-size="12" fill="#333333">{groen} · rood = kring · '
+               'gestreepte rand = ontbreekt in de lijst</text>')
+    if los:
+        # niet getekende begrippen, in regels die binnen de breedte passen
+        regels, regel = [], ""
+        for v in sorted(los, key=str.lower):
+            stuk = (", " if regel else "") + v
+            if len(regel + stuk) * 6.2 > B - 20:
+                regels.append(regel + ","); regel = v
+            else:
+                regel += stuk
+        regels.append(regel)
+        H += 20 + 16 * len(regels)
+        svg[0] = re.sub(r'height="\d+" viewBox="0 0 (\d+) \d+"', rf'height="{H}" viewBox="0 0 \1 {H}"', svg[0])
+        svg.append(f'<text x="{lx}" y="{ly + 70}" font-size="12" fill="#333333">Niet getekend (geen genus of opsomming, '
+                   f'{len(los)}):</text>')
+        svg += [f'<text x="{lx}" y="{ly + 86 + 16 * i}" font-size="11" fill="#666666">{xml_esc(r)}</text>' for i, r in enumerate(regels)]
+    svg.append("</svg>")
     svg = "\n".join(svg)
 
     pad = Path(pad)
@@ -697,9 +739,33 @@ def analyse(args):
     if args.png:
         if args.alleen_genus:
             # alleen de taxonomie, met een eigen gelaagde layout (zonder gebruikte begrippen)
-            tax = {e: s for e, s in uniek.items() if s in TAXONOMIE}
-            n_tax, l_tax, _, _ = gelaagde_ordening(knopen, list(tax), comp_van, ordening=genus_randen or None)
-            schrijf_png(args.png, n_tax, l_tax, tax, set(in_kring), set(ontbrekend), kring_rand)
+            # begrippen zonder genus of opsomming laten we weg; ze staan in de legenda.
+            # Opsomming omdraaien (lid -> generalisatie), zodat elke pijl naar het algemenere begrip wijst.
+            tax = {(e[::-1] if s == "opsomming" else e): s for e, s in uniek.items() if s in TAXONOMIE}
+            in_tax = sorted({v for e in tax for v in e})
+            los = [v for v in knopen if v not in in_tax]
+            # elke samenhangende taxonomie als losse boom, de grootste eerst
+            buur = defaultdict(set)
+            for b, d in tax:
+                buur[b].add(d); buur[d].add(b)
+            bomen, gezien = [], set()
+            for v in in_tax:
+                if v in gezien:
+                    continue
+                stapel, boom = [v], set()
+                while stapel:
+                    w = stapel.pop()
+                    if w not in boom:
+                        boom.add(w); stapel += buur[w] - boom
+                gezien |= boom
+                bomen.append(sorted(boom))
+            bomen.sort(key=lambda b: (-len(b), b[0].lower()))
+            n_tax, blokken = {}, []
+            for boom in bomen:
+                r = [e for e in tax if e[0] in boom]
+                n, l, _, _ = gelaagde_ordening(boom, r, comp_van, ordening=[e for e in r if tax[e] == "genus"] or None)
+                n_tax.update(n); blokken.append(l)
+            schrijf_png(args.png, n_tax, blokken, tax, set(in_kring), set(ontbrekend), kring_rand, los)
         else:
             schrijf_png(args.png, niveau, lagen, uniek, set(in_kring), set(ontbrekend), kring_rand)
 
