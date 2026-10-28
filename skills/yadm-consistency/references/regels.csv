@@ -23,7 +23,7 @@ KERN-C-BG02,begrippenlijst,fout,Specialisatie: het genus van de definitie is de 
 KERN-C-BG03,begrippenlijst,fout,"Generalisatie: de definitie somt de leden op, en een opsommende definitie is een generalisatie","opsomming volgens definitiekwaliteit (graaf.py), in beide richtingen"
 KERN-C-BG04,begrippenlijst,fout,Aggregatie: de definitie verwijst naar alle componenten,alle termen in de definitie
 KERN-C-BG05,begrippenlijst,signaal,De definitie van de eigenaar van een eigenschapsoort verwijst naar het andere entiteittype,alle termen in de definitie
-KERN-C-BG06,begrippenlijst,signaal,Begrippen zonder entiteittype,begrippen die aan geen entiteittype gekoppeld zijn
+KERN-C-BG06,begrippenlijst,signaal,Begrippen zonder entiteittype,"begrippen die aan geen entiteittype gekoppeld zijn, in drie groepen: in een ander feittype (term, kern of synoniem in de formulering), alleen in andere definities (graaf.py), of nergens gebruikt"
 KERN-C-BC01,bankcontactentabel,fout,Elk feittype in het FM staat in de BCT,"entiteit-, attribuut-, eigenschap- en productsoorten uit de feitextractie, op naam (zonder hoofdletters, '*', '(PKnn)', accolades; afkortingen uitgeschreven)"
 KERN-C-BC02,bankcontactentabel,fout,Elk feit in de BCT staat in het FM,op naam; bij geen treffer het meest gelijkende feittype
 KERN-C-BC03,bankcontactentabel,fout,"Soort, waardetype en afleiding in de BCT kloppen met het FM","kolommen soort, waardetype en afleiding, als ze gevuld zijn"

@@ -51,6 +51,8 @@ python -I skills/definitiekwaliteit/scripts/graaf.py analyse randen.csv --begrip
    - `opsomming`: an element of an enumeration ("X or Y")
    - `zelf`: a self-reference
 
+   It also prints possible duplicates (`KERN-D-SAM05`): a term listed twice, a synonym that is also a term or belongs to several terms, identical definitions, and terms with the same core ("blanco lijst (kieswet)" and "blanco lijst (wpp)"). The last kind is marked "(controleer)": it is fine if the contexts differ.
+
    Review `randen.csv` by hand before the next step.
 2. **`analyse`** reports cycles of any length, self-references, terms that are used but not defined, and the levels (elementary at the bottom, composite at the top). The output is a Mermaid diagram.
    - Add `--drawio graaf.drawio` for a layered file that opens in draw.io.

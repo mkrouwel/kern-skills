@@ -56,7 +56,7 @@ Rule IDs have the form `KERN-C-<category><number>`; `C` stands for consistency. 
 | ET | entiteittype | entity types: an entity type in focus has a product kind; no isolated entity types |
 | NM | naamgeving over diagrammen | entity types, transaction kinds, actor roles, MTKs and product kinds have the same label in every diagram |
 | TL | export (tool) | edges to missing nodes and headers "A"; problems in YADM, not in the model |
-| BG | begrippenlijst | the fact model against the glossary (only with `-b`) |
+| BG | begrippenlijst | the fact model against the glossary (only with `-b`); terms without an entity type are split into: used in another fact type (attribute, property type, product kind), used only in other definitions, or not used at all (candidates to remove, or missing from the model) |
 | BC | bankcontactentabel | the fact model against the BCT (only with `-t`): every FM fact in the BCT and vice versa; type, value type and derivation; the `bron FM` column; banks that exist in the CM; product kinds in the bank of their own TK; internal facts in a TK bank, external ones in an MTK bank; duplicates; rows without a bank explained |
 
 A new rule gets the next number in its category; an existing ID never changes meaning.

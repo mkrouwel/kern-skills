@@ -45,7 +45,7 @@ Vraag alleen door als term of definitie niet te herkennen is. Ontbreekt een opti
 - Anders schrijf je de lijst als `begrippenlijst.csv` in de scratchpad, met ten minste `term;definitie`, plus `synoniemen` en `acroniem` als ze er zijn.
 
 ### 2. Verwijzingsgraaf opbouwen
-Doe dit vóór het toetsen. De lijstregels (SAM-01 t/m SAM-08, KERN-D-SAM01 t/m KERN-D-SAM04, ESS-05, CON-01) hangen ervan af.
+Doe dit vóór het toetsen. De lijstregels (SAM-01 t/m SAM-08, KERN-D-SAM01 t/m KERN-D-SAM05, ESS-05, CON-01) hangen ervan af.
 
 1. **Kandidaat-randen:** `python -I scripts/graaf.py extract begrippenlijst.csv -o randen.csv`. Het script:
    - zoekt in elke definitie naar andere termen en synoniemen, inclusief eenvoudige meervoudsvormen
@@ -53,6 +53,7 @@ Doe dit vóór het toetsen. De lijstregels (SAM-01 t/m SAM-08, KERN-D-SAM01 t/m 
    - markeert de eerste treffer vooraan in de definitie als `genus`
    - markeert randen als `opsomming` als de definitie alleen uit termen met "of", "en/of", "dan wel" of komma's bestaat (extensionele definitie: geen genus)
    - meldt schendingen van KERN-D-STR01: variabelen die niet in zowel term als definitie staan, of die geen term uit de lijst zijn
+   - meldt kandidaten voor KERN-D-SAM05: dubbele termen, synoniemen die ook term zijn of bij meerdere termen horen, gelijke definities, en termen met dezelfde kern ("(controleer)": mag als de context verschilt)
 2. **Randen controleren:** lees `randen.csv` naast de definities en corrigeer het bestand.
    - Voeg toe wat het script mist: verbuigingen en afleidingen ("aangevraagd" → aanvraag, `soort` = `zelf` als het de eigen term is), en vaktermen die geen begrip in de lijst zijn (`doel` = de ontbrekende term).
    - Verwijder valse treffers: een woord dat in een andere betekenis gebruikt wordt.

@@ -51,7 +51,7 @@ Deze skill bouwt voort op drie andere skills, die in dezelfde skills-map moeten 
      - bij een generalisatie: een opsomming van de leden;
      - bij een aggregatie: een verwijzing naar alle componenten.
    - Bij BG01: onderscheid een afwijkende schrijfwijze (alleen gelijktrekken) van een ontbrekend begrip (term en definitie voorstellen; het genus volgt uit het FM).
-   - Bij BG06: geef aan welke begrippen een entiteittype zouden moeten zijn en welke terecht ontbreken, zoals rollen, attribuutwaarden of begrippen buiten de scope.
+   - Bij BG06: het script deelt de begrippen zonder entiteittype in drie groepen. *In een feittype* (attribuut-, eigenschap- of productsoort) is meestal terecht. *Alleen in andere definities* is ondersteunend. *Nergens gebruikt* is een kandidaat om te schrappen, of een begrip dat in het model ontbreekt. Geef per begrip aan welke van deze twee het is, en of het een entiteittype zou moeten zijn. Een begrip dat alleen in een DFS of ARS voorkomt, staat niet in de export en valt dus onterecht onder *nergens gebruikt*.
 
 5. **Beoordeel de BC-bevindingen.** Een BC01 en een BC02 met bijna dezelfde naam zijn meestal één feit met een andere schrijfwijze; noem ze samen. Bij BC04 (bron FM) geeft de feitextractie de diagrammen waarin het feit *zichtbaar* is: lijnen waarvan een eindpunt niet in het diagram staat, telt `yadm-facttypes` niet mee (zie de opmerkingen in de feitextractie).
 

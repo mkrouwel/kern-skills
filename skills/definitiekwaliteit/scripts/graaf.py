@@ -189,8 +189,42 @@ def randen_uit(begrippen):
     return randen
 
 
+def dubbelen(begrippen):
+    """KERN-D-SAM05: (regel, melding) voor dubbele termen, synoniemen die ook term zijn, gedeelde kernen
+    en gelijke definities. 'fout' = zeker dubbel; 'controleer' = mag als de context verschilt (CON-01)."""
+    uit = []
+    per_term, per_kern, per_def = defaultdict(list), defaultdict(list), defaultdict(list)
+    for b in begrippen:
+        per_term[norm(b["term"])].append(b["term"])
+        per_kern[norm(kern(b["term"]))].append(b["term"])
+        if b["definitie"]:
+            per_def[norm(b["definitie"]).rstrip(".")].append(b["term"])
+    for t, ts in per_term.items():
+        if len(ts) > 1:
+            uit.append(("fout", f"term '{ts[0]}' staat {len(ts)} keer in de lijst"))
+    for k, ts in per_kern.items():
+        if len(set(map(norm, ts))) > 1:
+            uit.append(("controleer", f"zelfde kern '{k}': {', '.join(sorted(set(ts)))}; verschilt de context (CON-01), "
+                                      "of is het één begrip (SAM-08)?"))
+    for ts in per_def.values():
+        if len(set(map(norm, ts))) > 1:
+            uit.append(("fout", f"gelijke definitie bij {', '.join(sorted(set(ts)))}: één begrip met synoniemen (SAM-08)"))
+    synoniem_van = defaultdict(set)
+    for b in begrippen:
+        for s in b["synoniemen"]:
+            synoniem_van[norm(s)].add(b["term"])
+    for s, ts in sorted(synoniem_van.items()):
+        if s in per_term and not {norm(t) for t in ts} <= {s}:
+            uit.append(("fout", f"'{per_term[s][0]}' is een term en ook synoniem van {', '.join(sorted(ts))}"))
+        if len(ts) > 1:
+            uit.append(("fout", f"synoniem '{s}' hoort bij meerdere termen: {', '.join(sorted(ts))}"))
+    return uit
+
+
 def extract(args):
     begrippen = lees_begrippen(args.begrippen)
+    for ernst, melding in dubbelen(begrippen):
+        print(f"KERN-D-SAM05{' (controleer)' if ernst == 'controleer' else ''}: {melding}")
     randen = randen_uit(begrippen)
     with open(args.output, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=["bron", "doel", "soort", "fragment"], delimiter=";")

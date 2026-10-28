@@ -193,6 +193,10 @@ Niveau geeft aan waar de regel getoetst wordt:
 - **Toetsvraag:** Veronderstellen de definities een begrip dat geen term heeft, zoals een gemeenschappelijk genus van meerdere begrippen, of de tegenhanger van een gedefinieerde specialisatie?
 - Dit is een advies, geen fout: stel een term voor en markeer die als voorstel.
 
+### KERN-D-SAM05 Geen dubbele termen — L
+- **Toetsvraag:** Komt een term twee keer voor, is een synoniem ook een term (of synoniem van meerdere termen), of hebben twee termen dezelfde definitie? Hebben termen met dezelfde kern ("blanco lijst (kieswet)", "blanco lijst (wpp)") elk een eigen context?
+- `graaf.py extract` meldt de kandidaten. Een melding "(controleer)" is geen fout als de context verschilt (CON-01); beoordeel dan of het één begrip is (SAM-08) of een specialisatie.
+
 ## Structuur van de definitie
 
 ### STR-01 Definitie start met zelfstandig naamwoord — D

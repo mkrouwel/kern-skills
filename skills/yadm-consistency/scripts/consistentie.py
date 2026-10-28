@@ -447,9 +447,23 @@ def controleer(paden, begrippenlijst=None, bct=None):
                 B.append(("KERN-C-BG05", form or f"{van} → {naar}", f"definitie van {', '.join(sorted(term[van]))} "
                           f"verwijst niet naar {', '.join(sorted(term[naar]))}", bron_lijst))
         gekoppeld = set().union(*term.values()) if term else set()
-        los = [b["term"] for b in begrippen if b["term"] not in gekoppeld]
-        if los:
-            B.append(("KERN-C-BG06", f"{len(los)} begrippen", ", ".join(los), bron_lijst))
+        # BG06 in drie groepen: in een ander feittype, alleen in andere definities, of nergens gebruikt
+        feiten = [norm(v["feittype"]) for v in fm_feiten(F, {}).values() if v["soort"] != "entiteittype"]
+        gebruikt = {r["doel"] for r in randen if r["bron"] != r["doel"]}
+        groepen = {"in een feittype": [], "alleen in andere definities": [], "nergens gebruikt": []}
+        for b in begrippen:
+            if b["term"] in gekoppeld:
+                continue
+            vormen = {v for n_ in [b["term"], graaf.kern(b["term"])] + b["synoniemen"] for v in graaf.varianten(norm(n_))}
+            if any(re.search(r"(?<!\w)" + re.escape(v) + r"(?!\w)", f) for v in vormen for f in feiten):
+                groepen["in een feittype"].append(b["term"])
+            elif b["term"] in gebruikt:
+                groepen["alleen in andere definities"].append(b["term"])
+            else:
+                groepen["nergens gebruikt"].append(b["term"])
+        for g, los in groepen.items():
+            if los:
+                B.append(("KERN-C-BG06", f"{g} ({len(los)})", ", ".join(los), bron_lijst))
     elif begrippenlijst:
         pass                                            # al gemeld: geen feitenmodel
     else:
